@@ -1,0 +1,7 @@
+.DS_Store
+
+/TEPNETenh/run_jobs.sh
+/TEPNETenh/dataset/processed
+/TEPNETenh/logs
+/TEPNETenh/output
+/TEPNETenh/tmp
