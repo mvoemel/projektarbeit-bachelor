@@ -105,7 +105,7 @@ def run_tuning(args, model_module):
 def run_training(args, model_module):
     print(f"Starting Training for v{args.version}...")
     
-    hparams = model_module.BEST_HPARAMS
+    hparams = model_module.HYPER_PARAMETERS
     print(f"Loaded Hyperparameters: {hparams}")
     
     val_path = os.path.join(DATA_PATH, VALIDATION_FILE)
