@@ -1,15 +1,10 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Input, MultiHeadAttention, Dense, GlobalAveragePooling1D, Dropout, Concatenate, Layer, Flatten, Dot, Conv2D, GlobalMaxPooling2D, Reshape, Add, LayerNormalization
 from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.regularizers import l2
-from tensorflow.keras.models import Model
 from tensorflow.keras.metrics import AUC, Precision, Recall
 from sklearn.metrics import confusion_matrix
 import numpy as np
 import pandas as pd
-import h5py
 import gc
-import sys
 import os
 import argparse
 import importlib
@@ -63,7 +58,7 @@ def run_tuning(args, model_module):
             "dropout_rate": trial.suggest_float('dropout_rate', 0.0, 0.5),
             "l2_reg": trial.suggest_float('l2_reg', 1e-5, 1e-2, log=True),
             "ff_dim": trial.suggest_int('ff_dim', 16, 200),
-            "num_layers": trial.suggest_int('num_layers', 1, 10),
+            "num_layers": trial.suggest_int('num_layers', 1, 5),
             "num_heads": trial.suggest_int('num_heads', 2, 50),
             "activation": trial.suggest_categorical('activation', ['relu', 'tanh', 'leaky_relu']),
             "embed_numerical": trial.suggest_categorical('embed_numerical', ['PLE', 'Periodic'])

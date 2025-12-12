@@ -47,13 +47,10 @@ The scripts assume you have a `dataset/processed` directory with the following f
    cp run_jobs_example.sh run_jobs.sh
    ```
 
-2. **Activate environment, if you are using one**:
-   E.g. `conda activate tensorflow-env`
+2. **Edit your jobs:**
+   Open `run_jobs.sh` and modify the job definitions to your liking. Define environment if you are using one (e.g. `conda activate tensorflow-env`)
 
-3. **Edit your jobs:**
-   Open `run_jobs.sh` and modify the job definitions to your liking.
-
-4. **Make it executable:**
+3. **Make it executable:**
 
    ```bash
    chmod +x run_jobs.sh
@@ -61,12 +58,26 @@ The scripts assume you have a `dataset/processed` directory with the following f
 
 ### Run your Jobs Script
 
-TODO: improve (add screen, etc.)
-
-**Run it:**
-
 ```bash
+# Start a new screen session
+screen -S training
+
+# Run your script
 ./run_jobs.sh
+
+# Detach: Press Ctrl+A, then D
+
+# Reattach later
+screen -r training
+
+# List sessions
+screen -ls
+
+# Terminate the screen session (inside of the screen session)
+exit
+
+# Terminate the screen session (outside of the screen session)
+screen -X -S training quit
 ```
 
 To see what is currently happening (live view):
