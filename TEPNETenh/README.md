@@ -80,10 +80,12 @@ exit
 screen -X -S training quit
 ```
 
-To see what is currently happening (live view):
-
 ```bash
+# To see what is currently happening (live view):
 tail -f logs/v1_train.log
+
+# To print the last 100 lines
+tail -n 100 logs/v1_train.log
 ```
 
 _(Press `Ctrl+C` to stop watching; the training continues in the background.)_
@@ -107,8 +109,8 @@ _(Press `Ctrl+C` to stop watching; the training continues in the background.)_
 **Multi-Component Architectures**
 
 - (_v5_) Baseline + Symmetric Cross-Attention + Interaction Map (2D CNN) + Deep ResNet Classifier Head (**LOW prio**)
-- (_v6_) Baseline + Symmetric Cross-Attention + Transformer Block + Interaction Map (2D CNN)
-- (_v7_) Baseline + Symmetric Cross-Attention + Transformer Block + Deep ResNet Classifier Head
+- (_v6_) Baseline + Symmetric Cross-Attention + Transformer Block + Interaction Map (2D CNN) (**MIDDLE prio**)
+- (_v7_) Baseline + Symmetric Cross-Attention + Transformer Block + Deep ResNet Classifier Head (**MIDDLE prio**)
 
 **Full Architecture**
 

@@ -122,7 +122,7 @@ def run_tuning(args, model_module):
         history = model.fit(
             train_gen,
             validation_data=({"TCR_Input": X_val_tcr, "Epitope_Input": X_val_epi, "Physicochemical_Features": X_val_feat}, y_val),
-            epochs=20, # Reduced for tuning
+            epochs=args.epochs,
             verbose=0,
             callbacks=[early_stopping]
         )
