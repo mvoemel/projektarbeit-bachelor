@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping, Callback
 from tensorflow.keras.metrics import AUC, Precision, Recall
 from sklearn.metrics import confusion_matrix
 import numpy as np
@@ -11,6 +11,8 @@ import importlib
 import optuna
 from optuna.samplers import TPESampler
 from data_loader import H5DiskGenerator, load_full_data_to_ram
+import requests
+import traceback
 
 
 print(f"GPU available: {tf.config.list_physical_devices('GPU')}")
@@ -22,12 +24,39 @@ EMBEDDING_DIM = 64
 EMBEDDING_TYPE = 'pca'
 IS_BALANCED = False  # Dataset is 1:5 imbalanced
 SEED = 42
+
 DATA_PATH = './dataset/processed/'
 TRAIN_FILE = f'train_ProtBERT_{EMBEDDING_DIM}_{EMBEDDING_TYPE}.h5'
 VALIDATION_FILE = f'validation_ProtBERT_{EMBEDDING_DIM}_{EMBEDDING_TYPE}.h5'
 TEST_FILE = f'test_ProtBERT_{EMBEDDING_DIM}_{EMBEDDING_TYPE}.h5'
 OUTPUT_PREFIX = './output/'
 MODEL_NAME_PREFIX = 'TEPNETenh_model'
+
+USE_NTFY_FEATURE = False
+NTFY_TOPIC = "tepnetenh-training-jobs-alerts-195739xyzqwer" # Change this to your topic
+NTFY_SERVER = "https://ntfy.sh"
+
+
+def send_ntfy(title, message, priority="default", tags=None):
+    if not USE_NTFY_FEATURE:
+        return
+    
+    try:
+        headers = {
+            "Title": title,
+            "Priority": priority,
+        }
+        if tags:
+            headers["Tags"] = tags
+        
+        requests.post(
+            f"{NTFY_SERVER}/{NTFY_TOPIC}",
+            data=message.encode('utf-8'),
+            headers=headers,
+            timeout=10
+        )
+    except Exception as e:
+        print(f"Failed to send ntfy notification: {e}")
 
 
 def get_args():
@@ -37,11 +66,21 @@ def get_args():
     parser.add_argument('--epochs', type=int, default=75)
     parser.add_argument('--trials', type=int, default=50, help='Number of Optuna trials')
     parser.add_argument('--tag', type=str, default='', help='Optional tag for filename (e.g. _run1)')
+    parser.add_argument('--ntfy', type=bool, default=USE_NTFY_FEATURE, help='Use ntfy feature')
+    parser.add_argument('--ntfy_topic', type=str, default=NTFY_TOPIC, help='Ntfy topic name')
+    parser.add_argument('--ntfy_server', type=str, default=NTFY_SERVER, help='Ntfy server URL')
     return parser.parse_args()
 
 
 def run_tuning(args, model_module):
     print(f"Starting Hyperparameter Tuning for v{args.version}...")
+    
+    send_ntfy(
+        f"Tuning Started - v{args.version}",
+        f"Starting hyperparameter tuning with {args.trials} trials",
+        priority="default",
+        tags="gear"
+    )
     
     # 1. Load VALIDATION data (Safe to load into RAM)
     val_file = os.path.join(DATA_PATH, VALIDATION_FILE)
@@ -51,7 +90,11 @@ def run_tuning(args, model_module):
     train_file = os.path.join(DATA_PATH, TRAIN_FILE)
     train_gen = H5DiskGenerator(train_file, batch_size=32, balanced=IS_BALANCED)
     
+    best_auc_so_far = 0
+    
     def objective(trial):
+        nonlocal best_auc_so_far
+        
         hparams = {
             "batch_size": trial.suggest_categorical('batch_size', [16, 32, 64, 128]),
             "learning_rate": trial.suggest_float('learning_rate', 1e-4, 1e-2, log=True),
@@ -86,6 +129,16 @@ def run_tuning(args, model_module):
         
         val_auc = max(history.history['val_roc_auc'])
         
+        # Notify on new best
+        if val_auc > best_auc_so_far:
+            best_auc_so_far = val_auc
+            send_ntfy(
+                f"New Best Trial - v{args.version}",
+                f"Trial {trial.number}: AUC={val_auc:.4f}\nLR={hparams['learning_rate']:.6f}, BS={hparams['batch_size']}, Layers={hparams['num_layers']}",
+                priority="default",
+                tags="star"
+            )
+        
         # Cleanup
         tf.keras.backend.clear_session()
         del model
@@ -95,7 +148,17 @@ def run_tuning(args, model_module):
 
     study = optuna.create_study(direction="maximize", sampler=TPESampler(seed=SEED))
     study.optimize(objective, n_trials=args.trials)
+    
     print("Best Parameters:", study.best_params)
+    
+    # Send final tuning results
+    params_summary = "\n".join([f"{k}: {v}" for k, v in study.best_params.items()])
+    send_ntfy(
+        f"Tuning Complete - v{args.version}",
+        f"Best AUC: {study.best_value:.4f}\n\nBest params:\n{params_summary}",
+        priority="high",
+        tags="checkered_flag"
+    )
     
     params_save_name = f"best_params_v{args.version}.txt"
     with open(os.path.join(OUTPUT_PREFIX, params_save_name), "w") as f:
@@ -104,6 +167,13 @@ def run_tuning(args, model_module):
 
 def run_training(args, model_module):
     print(f"Starting Training for v{args.version}...")
+    
+    send_ntfy(
+        f"Training Started - v{args.version}",
+        f"Model v{args.version} training has begun",
+        priority="default",
+        tags="rocket"
+    )
     
     hparams = model_module.HYPER_PARAMETERS
     print(f"Loaded Hyperparameters: {hparams}")
@@ -149,6 +219,15 @@ def run_training(args, model_module):
     for k, v in results.items():
         print(f"{k}: {v:.4f}")
     
+    # Send test results notification
+    results_summary = "\n".join([f"{k}: {v:.4f}" for k, v in results.items()])
+    send_ntfy(
+        f"Training Complete - v{args.version}",
+        f"Model v{args.version} finished training!\n\nTest Results:\n{results_summary}",
+        priority="high",
+        tags="tada"
+    )
+    
     save_name = f"{MODEL_NAME_PREFIX}_v{args.version}_{EMBEDDING_DIM}_{EMBEDDING_TYPE}{args.tag}.keras"
     model.save(os.path.join(OUTPUT_PREFIX, save_name))
     print(f"\nModel saved to {save_name}")
@@ -162,13 +241,38 @@ if __name__ == "__main__":
 
     args = get_args()
     
+    # Update global ntfy config if custom values provided
+    if bool(args.ntfy) != USE_NTFY_FEATURE:
+        USE_NTFY_FEATURE = bool(args.ntfy)
+    if args.ntfy_topic != NTFY_TOPIC:
+        NTFY_TOPIC = args.ntfy_topic
+    if args.ntfy_server != NTFY_SERVER:
+        NTFY_SERVER = args.ntfy_server
+    
     try:
         model_module = importlib.import_module(f"versions.v{args.version}")
     except ModuleNotFoundError:
         print(f"Error: Model file 'models/v{args.version}.py' not found.")
+        send_ntfy(
+            f"Error - v{args.version}",
+            f"Model file 'models/v{args.version}.py' not found",
+            priority="urgent",
+            tags="x"
+        )
         exit(1)
-        
-    if args.mode == 'TUNE':
-        run_tuning(args, model_module)
-    else:
-        run_training(args, model_module)
+    
+    try:
+        if args.mode == 'TUNE':
+            run_tuning(args, model_module)
+        else:
+            run_training(args, model_module)
+    except Exception as e:
+        # Catch any unexpected errors and notify
+        error_msg = f"Error during {args.mode.lower()}:\n{str(e)}\n\n{traceback.format_exc()[:500]}"
+        send_ntfy(
+            f"Error - v{args.version}",
+            error_msg,
+            priority="urgent",
+            tags="rotating_light"
+        )
+        raise

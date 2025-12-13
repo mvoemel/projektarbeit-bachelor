@@ -13,15 +13,8 @@ echo "=================="
 echo "Starting Job Queue"
 echo "=================="
 
-echo "Job 1: Training v0..."
-python main.py --version 0 --mode TRAIN --epochs 30 --tag _run1 > logs/v0_train.log 2>&1 && \
-    notify "✅ Job 1 Complete: Training v0" || \
-    notify "❌ Job 1 Failed: Training v0"
-
-echo "Job 2: Tuning v1..."
-python main.py --version 1 --mode TUNE --trials 30 > logs/v1_tune.log 2>&1 && \
-    notify "✅ Job 2 Complete: Tuning v1" || \
-    notify "❌ Job 2 Failed: Tuning v1"
+python main.py --version 0 --mode TRAIN --epochs 30 --tag _run1 --ntfy True --ntfy_topic $NTFY_TOPIC > logs/v0_train.log 2>&1 || echo "Job 1 Failed"
+python main.py --version 1 --mode TUNE --trials 30 --ntfy True --ntfy_topic $NTFY_TOPIC > logs/v1_tune.log 2>&1 || echo "Job 2 Failed"
 
 notify "🎉 All Jobs Completed"
 
