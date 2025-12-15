@@ -63,6 +63,7 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', type=str, required=True, help='Model version (e.g., 0, 1)')
     parser.add_argument('--mode', type=str, choices=['TRAIN', 'TUNE'], default='TRAIN')
+    parser.add_argument('--optimizer', type=str, choices=['SGD', 'ADAM'], default='ADAM')
     parser.add_argument('--epochs', type=int, default=75)
     parser.add_argument('--trials', type=int, default=50, help='Number of Optuna trials')
     parser.add_argument('--tag', type=str, default='', help='Optional tag for filename (e.g. _run1)')
@@ -77,7 +78,7 @@ def run_tuning(args, model_module):
     
     send_ntfy(
         f"Tuning Started - v{args.version}",
-        f"Starting hyperparameter tuning with {args.trials} trials",
+        f"Starting hyperparameter tuning with {args.trials} trials using {args.optimizer}",
         priority="default",
         tags="gear"
     )
@@ -88,7 +89,6 @@ def run_tuning(args, model_module):
 
     # 2. Init TRAINING Generator (Streams from Disk)
     train_file = os.path.join(DATA_PATH, TRAIN_FILE)
-    train_gen = H5DiskGenerator(train_file, batch_size=32, balanced=IS_BALANCED)
     
     best_auc_so_far = 0
     
@@ -107,21 +107,38 @@ def run_tuning(args, model_module):
             "embed_numerical": trial.suggest_categorical('embed_numerical', ['PLE', 'Periodic'])
         }
         
-        # Update generator batch size
-        train_gen.batch_size = hparams['batch_size']
+        train_gen_trial = H5DiskGenerator(
+            train_file, 
+            batch_size=hparams['batch_size'], 
+            balanced=IS_BALANCED
+        )
         
-        optimizer = tf.keras.optimizers.SGD(learning_rate=hparams['learning_rate'], clipnorm=1.0)
+        if args.optimzer == "SGD":
+            optimizer = tf.keras.optimizers.SGD(learning_rate=hparams['learning_rate'], clipnorm=1.0)
+        else:
+            optimizer = tf.keras.optimizers.Adam(learning_rate=hparams['learning_rate'], clipnorm=1.0)
 
-        # Build model dynamically
         model = model_module.create_model(hparams, embed_dim=EMBEDDING_DIM)
         
-        model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=[tf.keras.metrics.AUC(name='roc_auc')])
+        model.compile(
+            optimizer=optimizer, 
+            loss='binary_crossentropy', 
+            metrics=[tf.keras.metrics.AUC(name='roc_auc')]
+        )
         
-        early_stopping = EarlyStopping(monitor="val_loss", patience=3, restore_best_weights=True)
+        early_stopping = EarlyStopping(
+            monitor="val_roc_auc", 
+            mode="max", # maximize AUC
+            patience=3, 
+            restore_best_weights=True
+        )
         
         history = model.fit(
-            train_gen,
-            validation_data=({"TCR_Input": X_val_tcr, "Epitope_Input": X_val_epi, "Physicochemical_Features": X_val_feat}, y_val),
+            train_gen_trial,
+            validation_data=(
+                {"TCR_Input": X_val_tcr, "Epitope_Input": X_val_epi, "Physicochemical_Features": X_val_feat}, 
+                y_val
+            ),
             epochs=args.epochs,
             verbose=0,
             callbacks=[early_stopping]
@@ -142,6 +159,7 @@ def run_tuning(args, model_module):
         # Cleanup
         tf.keras.backend.clear_session()
         del model
+        del train_gen_trial  # Delete the trial generator
         gc.collect()
         
         return val_auc
@@ -170,7 +188,7 @@ def run_training(args, model_module):
     
     send_ntfy(
         f"Training Started - v{args.version}",
-        f"Model v{args.version} training has begun",
+        f"Model v{args.version} training has begun using {args.optimizer}",
         priority="default",
         tags="rocket"
     )
@@ -184,7 +202,10 @@ def run_training(args, model_module):
     train_path = os.path.join(DATA_PATH, TRAIN_FILE)
     train_gen = H5DiskGenerator(train_path, batch_size=hparams['batch_size'], balanced=False)
     
-    optimizer = tf.keras.optimizers.SGD(learning_rate=hparams['learning_rate'], clipnorm=1.0)
+    if args.optimzer == "SGD":
+        optimizer = tf.keras.optimizers.SGD(learning_rate=hparams['learning_rate'], clipnorm=1.0)
+    else:
+        optimizer = tf.keras.optimizers.Adam(learning_rate=hparams['learning_rate'], clipnorm=1.0)
     
     model = model_module.create_model(hparams, embed_dim=EMBEDDING_DIM)
     
@@ -194,7 +215,7 @@ def run_training(args, model_module):
         metrics=['accuracy', tf.keras.metrics.AUC(name='roc_auc'), Precision(name='precision'), Recall(name='recall')]
     )
     
-    early_stopping = EarlyStopping(monitor="val_loss", patience=5, restore_best_weights=True)
+    early_stopping = EarlyStopping(monitor="val_roc_auc", mode="max", patience=5, restore_best_weights=True)
     
     history = model.fit(
         train_gen,
@@ -252,7 +273,7 @@ if __name__ == "__main__":
     try:
         model_module = importlib.import_module(f"versions.v{args.version}")
     except ModuleNotFoundError:
-        print(f"Error: Model file 'models/v{args.version}.py' not found.")
+        print(f"Error: Model file 'versions/v{args.version}.py' not found.")
         send_ntfy(
             f"Error - v{args.version}",
             f"Model file 'models/v{args.version}.py' not found",

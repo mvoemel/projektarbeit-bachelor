@@ -1,20 +1,22 @@
 #!/bin/bash
 
-# Activate your environment
-conda activate tensorflow-env
+NTFY_TOPIC="your-ntfy-topic-name"
 
-# Create logs directory if it doesn't exist
+notify() {
+    curl -d "$1" ntfy.sh/$NTFY_TOPIC
+}
+
+conda activate tensorflow-env
 mkdir -p logs
 
 echo "=================="
 echo "Starting Job Queue"
 echo "=================="
 
-echo "Job 1: Training v1..."
-python main.py --version 1 --mode TRAIN --epochs 30 --tag _run1 > logs/v1_train.log 2>&1 || echo "Job 1 Failed"
+python main.py --version 0 --mode TRAIN --optimizer SGD --epochs 30 --tag _run1 --ntfy True --ntfy_topic $NTFY_TOPIC > logs/v0_train.log 2>&1 || echo "Job 1 Failed"
+python main.py --version 1 --mode TUNE --optimizer ADAM --trials 20 --epochs 20 --ntfy True --ntfy_topic $NTFY_TOPIC > logs/v1_tune.log 2>&1 || echo "Job 2 Failed"
 
-echo "Job 2: Tuning v2..."
-python main.py --version 2 --mode TUNE --trials 10 --epochs 15  > logs/v2_tune.log 2>&1 || echo "Job 2 Failed"
+notify "🎉 All Jobs Completed"
 
 echo "=================="
 echo "All Jobs Completed"
