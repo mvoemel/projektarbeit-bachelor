@@ -113,7 +113,7 @@ def run_tuning(args, model_module):
             balanced=IS_BALANCED
         )
         
-        if args.optimzer == "SGD":
+        if args.optimizer == "SGD":
             optimizer = tf.keras.optimizers.SGD(learning_rate=hparams['learning_rate'], clipnorm=1.0)
         else:
             optimizer = tf.keras.optimizers.Adam(learning_rate=hparams['learning_rate'], clipnorm=1.0)
@@ -202,7 +202,7 @@ def run_training(args, model_module):
     train_path = os.path.join(DATA_PATH, TRAIN_FILE)
     train_gen = H5DiskGenerator(train_path, batch_size=hparams['batch_size'], balanced=False)
     
-    if args.optimzer == "SGD":
+    if args.optimizer == "SGD":
         optimizer = tf.keras.optimizers.SGD(learning_rate=hparams['learning_rate'], clipnorm=1.0)
     else:
         optimizer = tf.keras.optimizers.Adam(learning_rate=hparams['learning_rate'], clipnorm=1.0)
