@@ -10,7 +10,7 @@ import argparse
 import importlib
 import optuna
 from optuna.samplers import TPESampler
-from data_loader import H5DiskGenerator, load_full_data_to_ram
+from data_loader import load_full_data_to_ram, create_memory_dataset
 import requests
 import traceback
 
@@ -83,12 +83,13 @@ def run_tuning(args, model_module):
         tags="gear"
     )
     
-    # 1. Load VALIDATION data (Safe to load into RAM)
-    val_file = os.path.join(DATA_PATH, VALIDATION_FILE)
-    X_val_tcr, X_val_epi, X_val_feat, y_val = load_full_data_to_ram(val_file)
-
-    # 2. Init TRAINING Generator (Streams from Disk)
-    train_file = os.path.join(DATA_PATH, TRAIN_FILE)
+    # Load training data into RAM
+    train_path = os.path.join(DATA_PATH, TRAIN_FILE)
+    X_train_tcr, X_train_epi, X_train_feat, y_train = load_full_data_to_ram(train_path)
+    
+    # Load validation data into RAM
+    val_path = os.path.join(DATA_PATH, VALIDATION_FILE)
+    X_val_tcr, X_val_epi, X_val_feat, y_val = load_full_data_to_ram(val_path)
     
     best_auc_so_far = 0
     
@@ -107,11 +108,13 @@ def run_tuning(args, model_module):
             "embed_numerical": trial.suggest_categorical('embed_numerical', ['PLE', 'Periodic'])
         }
         
-        train_gen_trial = H5DiskGenerator(
-            train_file, 
-            batch_size=hparams['batch_size'], 
+        train_ds = create_memory_dataset(
+            X_train_tcr, X_train_epi, X_train_feat, y_train,
+            batch_size=hparams['batch_size'],
             balanced=IS_BALANCED
         )
+        
+        steps_per_epoch = len(y_train) // hparams['batch_size']
         
         if args.optimizer == "SGD":
             optimizer = tf.keras.optimizers.SGD(learning_rate=hparams['learning_rate'], clipnorm=1.0)
@@ -134,7 +137,8 @@ def run_tuning(args, model_module):
         )
         
         history = model.fit(
-            train_gen_trial,
+            train_ds,
+            steps_per_epoch=steps_per_epoch,
             validation_data=(
                 {"TCR_Input": X_val_tcr, "Epitope_Input": X_val_epi, "Physicochemical_Features": X_val_feat}, 
                 y_val
@@ -196,11 +200,22 @@ def run_training(args, model_module):
     hparams = model_module.HYPER_PARAMETERS
     print(f"Loaded Hyperparameters: {hparams}")
     
+    # Load training data into RAM
+    train_path = os.path.join(DATA_PATH, TRAIN_FILE)
+    X_train_tcr, X_train_epi, X_train_feat, y_train = load_full_data_to_ram(train_path)
+
+    # Load validation data into RAM
     val_path = os.path.join(DATA_PATH, VALIDATION_FILE)
     X_val_tcr, X_val_epi, X_val_feat, y_val = load_full_data_to_ram(val_path)
+
+    train_dataset = create_memory_dataset(
+        X_train_tcr, X_train_epi, X_train_feat, y_train,
+        batch_size=hparams['batch_size'],
+        balanced=IS_BALANCED
+    )
     
-    train_path = os.path.join(DATA_PATH, TRAIN_FILE)
-    train_gen = H5DiskGenerator(train_path, batch_size=hparams['batch_size'], balanced=False)
+    total_samples = len(y_train)
+    steps_per_epoch = total_samples // hparams['batch_size']
     
     if args.optimizer == "SGD":
         optimizer = tf.keras.optimizers.SGD(learning_rate=hparams['learning_rate'], clipnorm=1.0)
@@ -218,7 +233,8 @@ def run_training(args, model_module):
     early_stopping = EarlyStopping(monitor="val_roc_auc", mode="max", patience=5, restore_best_weights=True)
     
     history = model.fit(
-        train_gen,
+        train_dataset,
+        steps_per_epoch=steps_per_epoch,
         validation_data=({"TCR_Input": X_val_tcr, "Epitope_Input": X_val_epi, "Physicochemical_Features": X_val_feat}, y_val),
         epochs=args.epochs,
         verbose=1,

@@ -12,19 +12,6 @@ FEATURE_COLUMNS = [
 ]
 
 
-def load_h5_metadata_only(h5_path):
-    """
-    Loads only the lightweight metadata (Labels + Features) into memory.
-    Does NOT load the heavy TCR/Epitope embeddings.
-    """
-    print(f"Loading metadata from {h5_path}...")
-    with h5py.File(h5_path, 'r') as f:
-        meta_data = {}
-        for key in f['meta'].keys():
-            meta_data[key] = f[f'meta/{key}'][:]
-    return pd.DataFrame(meta_data)
-
-
 def load_full_data_to_ram(h5_path):
     """
     Loads EVERYTHING into RAM. Only use this for Validation/Test sets (small).
@@ -51,83 +38,47 @@ def load_full_data_to_ram(h5_path):
     return X_tcr, X_epi, X_feat, y
 
 
-class H5DiskGenerator(tf.keras.utils.Sequence):
+def create_memory_dataset(X_tcr, X_epi, X_feat, y, batch_size, balanced=False):
     """
-    Reads batches from H5 on disk to save RAM.
-    Handles class balancing dynamically.
+    Creates a highly optimized tf.data.Dataset from in-memory arrays.
+    Replicates the class balancing logic without touching the disk.
     """
-    def __init__(self, h5_path, batch_size, balanced=False):
-        super().__init__()  # Fixes the UserWarning about super().__init__
-        self.h5_path = h5_path
-        self.batch_size = batch_size
-        self.balanced = balanced
-        
-        # 1. Load Metadata into RAM
-        self.df_meta = load_h5_metadata_only(h5_path)
-        self.y_all = self.df_meta['binding'].values
-        self.feat_all = self.df_meta[FEATURE_COLUMNS].values.astype(np.float32)
-        
-        # 2. Separate Indices
-        self.pos_indices = np.where(self.y_all == 1)[0]
-        self.neg_indices = np.where(self.y_all == 0)[0]
-        
-        print(f"Generator initialized: {len(self.pos_indices)} Pos, {len(self.neg_indices)} Neg")
-        
-        # 3. Open H5 file handle (read-only)
-        self.h5_file = h5py.File(self.h5_path, 'r')
-        self.tcr_dset = self.h5_file['TCR']
-        self.epi_dset = self.h5_file['epitope']
-        
-        # 4. Define epoch length
-        self.steps_per_epoch = int(len(self.pos_indices) / (batch_size // 2 if balanced else (batch_size // 6))) 
-        
-    def __len__(self):
-        return self.steps_per_epoch
+    # 1. Separate Positive and Negative indices
+    pos_mask = (y == 1)
+    neg_mask = (y == 0)
 
-    def __getitem__(self, index):
-        # Determine batch composition
-        if self.balanced:
-            n_pos = self.batch_size // 2
-            n_neg = self.batch_size - n_pos
-        else:
-            # 1:5 Ratio logic (approx 10 pos, 54 neg for batch 64)
-            n_pos = max(1, int(self.batch_size * (1/6)))
-            n_neg = self.batch_size - n_pos
-            
-        # Sample Indices (FIX: replace=False prevents duplicates)
-        batch_pos_idx = np.random.choice(self.pos_indices, n_pos, replace=False)
-        batch_neg_idx = np.random.choice(self.neg_indices, n_neg, replace=False)
-        
-        # Combine
-        batch_indices = np.concatenate([batch_pos_idx, batch_neg_idx])
-        
-        # SORT indices for H5 reading (Required by h5py)
-        # We sort to fetch from disk, but this ruins the random shuffle order.
-        # So we fetch sorted, then we will shuffle the arrays in memory.
-        sorted_indices = np.sort(batch_indices)
-        
-        # Read from Disk
-        batch_tcr = self.tcr_dset[sorted_indices].astype(np.float32)
-        batch_epi = self.epi_dset[sorted_indices].astype(np.float32)
-        
-        # Get in-memory data
-        batch_feat = self.feat_all[sorted_indices]
-        batch_y = self.y_all[sorted_indices].astype(np.float32)
-        
-        # RESHUFFLE (Crucial step)
-        # Since we sorted indices to read from disk, the batch is now ordered by index (likely grouped).
-        # We must shuffle the arrays in unison so the model doesn't learn order artifacts.
-        shuffle_idxs = np.arange(len(batch_y))
-        np.random.shuffle(shuffle_idxs)
-        
-        return (
+    # 2. Create datasets for each class
+    # We use from_tensor_slices which treats the RAM arrays as the data source
+    def make_ds(mask):
+        return tf.data.Dataset.from_tensor_slices((
             {
-                "TCR_Input": batch_tcr[shuffle_idxs], 
-                "Epitope_Input": batch_epi[shuffle_idxs], 
-                "Physicochemical_Features": batch_feat[shuffle_idxs]
+                "TCR_Input": X_tcr[mask],
+                "Epitope_Input": X_epi[mask],
+                "Physicochemical_Features": X_feat[mask]
             },
-            batch_y[shuffle_idxs]
-        )
+            y[mask]
+        )).shuffle(buffer_size=len(y[mask])) # Shuffle efficiently in RAM
+
+    pos_ds = make_ds(pos_mask)
+    neg_ds = make_ds(neg_mask)
+
+    # 3. Define Sampling Weights (The Balancing Logic)
+    if balanced:
+        # 50% Positive, 50% Negative
+        weights = [0.5, 0.5]
+    else:
+        # Your logic: approx 1/6 Positive, 5/6 Negative
+        weights = [1/6, 5/6]
+
+    # 4. Sample from both datasets to create the final stream
+    # This repeats the data indefinitely, so we must define steps_per_epoch later
+    dataset = tf.data.Dataset.sample_from_datasets(
+        [pos_ds, neg_ds], 
+        weights=weights
+    )
+
+    # 5. Batch and Prefetch
+    dataset = dataset.batch(batch_size)
+    dataset = dataset.prefetch(tf.data.AUTOTUNE)
     
-    def on_epoch_end(self):
-        pass
+    return dataset
