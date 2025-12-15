@@ -40,9 +40,7 @@ def load_full_data_to_ram(h5_path):
 
 def create_balanced_memory_generator(X_tcr, X_epi, X_feat, y, batch_size):
     """
-    Zero-Copy Generator:
-    Instead of copying data into the dataset, we keep the data in global RAM
-    and only pass INDICES to the generator.
+    Zero-Copy Generator with CORRECT 3D SHAPES.
     """
     # 1. Pre-calculate indices for each class
     pos_indices = np.where(y == 1)[0]
@@ -51,12 +49,11 @@ def create_balanced_memory_generator(X_tcr, X_epi, X_feat, y, batch_size):
     # 2. Define the generator
     def generator():
         while True:
-            # A. Select indices for this batch (50/50 balanced)
-            # You can tweak this ratio (e.g., n_pos = batch_size // 6)
+            # A. Select indices (50/50 balanced)
             n_pos = batch_size // 2
             n_neg = batch_size - n_pos
             
-            # Randomly select indices (Fast, lightweight integers)
+            # Randomly select indices
             batch_pos = np.random.choice(pos_indices, n_pos, replace=False)
             batch_neg = np.random.choice(neg_indices, n_neg, replace=False)
             
@@ -64,24 +61,29 @@ def create_balanced_memory_generator(X_tcr, X_epi, X_feat, y, batch_size):
             batch_idx = np.concatenate([batch_pos, batch_neg])
             np.random.shuffle(batch_idx)
             
-            # B. Fetch the actual data (Zero-copy slice)
-            # This is the only moment data is "touched"
+            # B. Fetch data using slices (Preserves dimensions: Batch x Seq x Dim)
             yield (
                 {
-                    "TCR_Input": X_tcr[batch_idx],
-                    "Epitope_Input": X_epi[batch_idx],
+                    "TCR_Input": X_tcr[batch_idx], 
+                    "Epitope_Input": X_epi[batch_idx], 
                     "Physicochemical_Features": X_feat[batch_idx]
                 },
                 y[batch_idx]
             )
 
-    # 3. Create the Dataset from the generator
+    # 3. CORRECT Output Signature (Now matches your Model's Input Layers)
     output_signature = (
         {
-            "TCR_Input": tf.TensorSpec(shape=(None, 64), dtype=tf.float32),
-            "Epitope_Input": tf.TensorSpec(shape=(None, 64), dtype=tf.float32),
+            # TCR is 26 amino acids long, 64 features deep
+            "TCR_Input": tf.TensorSpec(shape=(None, 26, 64), dtype=tf.float32),
+            
+            # Epitope is 24 amino acids long, 64 features deep
+            "Epitope_Input": tf.TensorSpec(shape=(None, 24, 64), dtype=tf.float32),
+            
+            # Features are 1D vector of size 12
             "Physicochemical_Features": tf.TensorSpec(shape=(None, 12), dtype=tf.float32),
         },
+        # Labels are 1D scalars
         tf.TensorSpec(shape=(None,), dtype=tf.float32)
     )
 
@@ -90,8 +92,6 @@ def create_balanced_memory_generator(X_tcr, X_epi, X_feat, y, batch_size):
         output_signature=output_signature
     )
     
-    # 4. Prefetch to keep GPU busy
-    # This keeps only ~5-10 batches in memory buffer, not the whole dataset
     dataset = dataset.prefetch(tf.data.AUTOTUNE)
     
     return dataset
