@@ -38,47 +38,60 @@ def load_full_data_to_ram(h5_path):
     return X_tcr, X_epi, X_feat, y
 
 
-def create_memory_dataset(X_tcr, X_epi, X_feat, y, batch_size, balanced=False):
+def create_balanced_memory_generator(X_tcr, X_epi, X_feat, y, batch_size):
     """
-    Creates a highly optimized tf.data.Dataset from in-memory arrays.
-    Replicates the class balancing logic without touching the disk.
+    Zero-Copy Generator:
+    Instead of copying data into the dataset, we keep the data in global RAM
+    and only pass INDICES to the generator.
     """
-    # 1. Separate Positive and Negative indices
-    pos_mask = (y == 1)
-    neg_mask = (y == 0)
+    # 1. Pre-calculate indices for each class
+    pos_indices = np.where(y == 1)[0]
+    neg_indices = np.where(y == 0)[0]
+    
+    # 2. Define the generator
+    def generator():
+        while True:
+            # A. Select indices for this batch (50/50 balanced)
+            # You can tweak this ratio (e.g., n_pos = batch_size // 6)
+            n_pos = batch_size // 2
+            n_neg = batch_size - n_pos
+            
+            # Randomly select indices (Fast, lightweight integers)
+            batch_pos = np.random.choice(pos_indices, n_pos, replace=False)
+            batch_neg = np.random.choice(neg_indices, n_neg, replace=False)
+            
+            # Combine and shuffle indices
+            batch_idx = np.concatenate([batch_pos, batch_neg])
+            np.random.shuffle(batch_idx)
+            
+            # B. Fetch the actual data (Zero-copy slice)
+            # This is the only moment data is "touched"
+            yield (
+                {
+                    "TCR_Input": X_tcr[batch_idx],
+                    "Epitope_Input": X_epi[batch_idx],
+                    "Physicochemical_Features": X_feat[batch_idx]
+                },
+                y[batch_idx]
+            )
 
-    # 2. Create datasets for each class
-    # We use from_tensor_slices which treats the RAM arrays as the data source
-    def make_ds(mask):
-        return tf.data.Dataset.from_tensor_slices((
-            {
-                "TCR_Input": X_tcr[mask],
-                "Epitope_Input": X_epi[mask],
-                "Physicochemical_Features": X_feat[mask]
-            },
-            y[mask]
-        )).shuffle(buffer_size=len(y[mask])) # Shuffle efficiently in RAM
-
-    pos_ds = make_ds(pos_mask)
-    neg_ds = make_ds(neg_mask)
-
-    # 3. Define Sampling Weights (The Balancing Logic)
-    if balanced:
-        # 50% Positive, 50% Negative
-        weights = [0.5, 0.5]
-    else:
-        # Your logic: approx 1/6 Positive, 5/6 Negative
-        weights = [1/6, 5/6]
-
-    # 4. Sample from both datasets to create the final stream
-    # This repeats the data indefinitely, so we must define steps_per_epoch later
-    dataset = tf.data.Dataset.sample_from_datasets(
-        [pos_ds, neg_ds], 
-        weights=weights
+    # 3. Create the Dataset from the generator
+    output_signature = (
+        {
+            "TCR_Input": tf.TensorSpec(shape=(None, 64), dtype=tf.float32),
+            "Epitope_Input": tf.TensorSpec(shape=(None, 64), dtype=tf.float32),
+            "Physicochemical_Features": tf.TensorSpec(shape=(None, 12), dtype=tf.float32),
+        },
+        tf.TensorSpec(shape=(None,), dtype=tf.float32)
     )
 
-    # 5. Batch and Prefetch
-    dataset = dataset.batch(batch_size)
+    dataset = tf.data.Dataset.from_generator(
+        generator, 
+        output_signature=output_signature
+    )
+    
+    # 4. Prefetch to keep GPU busy
+    # This keeps only ~5-10 batches in memory buffer, not the whole dataset
     dataset = dataset.prefetch(tf.data.AUTOTUNE)
     
     return dataset

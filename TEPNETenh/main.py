@@ -10,7 +10,7 @@ import argparse
 import importlib
 import optuna
 from optuna.samplers import TPESampler
-from data_loader import load_full_data_to_ram, create_memory_dataset
+from data_loader import load_full_data_to_ram, create_balanced_memory_generator
 import requests
 import traceback
 
@@ -108,13 +108,13 @@ def run_tuning(args, model_module):
             "embed_numerical": trial.suggest_categorical('embed_numerical', ['PLE', 'Periodic'])
         }
         
-        train_ds = create_memory_dataset(
+        train_ds = create_balanced_memory_generator(
             X_train_tcr, X_train_epi, X_train_feat, y_train,
             batch_size=hparams['batch_size'],
-            balanced=IS_BALANCED
         )
         
-        steps_per_epoch = len(y_train) // hparams['batch_size']
+        n_pos = np.sum(y_train == 1)
+        steps_per_epoch = n_pos // (hparams['batch_size'] // 2)
         
         if args.optimizer == "SGD":
             optimizer = tf.keras.optimizers.SGD(learning_rate=hparams['learning_rate'], clipnorm=1.0)
@@ -208,14 +208,13 @@ def run_training(args, model_module):
     val_path = os.path.join(DATA_PATH, VALIDATION_FILE)
     X_val_tcr, X_val_epi, X_val_feat, y_val = load_full_data_to_ram(val_path)
 
-    train_dataset = create_memory_dataset(
+    train_ds = create_balanced_memory_generator(
         X_train_tcr, X_train_epi, X_train_feat, y_train,
         batch_size=hparams['batch_size'],
-        balanced=IS_BALANCED
     )
     
-    total_samples = len(y_train)
-    steps_per_epoch = total_samples // hparams['batch_size']
+    n_pos = np.sum(y_train == 1)
+    steps_per_epoch = n_pos // (hparams['batch_size'] // 2)
     
     if args.optimizer == "SGD":
         optimizer = tf.keras.optimizers.SGD(learning_rate=hparams['learning_rate'], clipnorm=1.0)
@@ -233,7 +232,7 @@ def run_training(args, model_module):
     early_stopping = EarlyStopping(monitor="val_roc_auc", mode="max", patience=5, restore_best_weights=True)
     
     history = model.fit(
-        train_dataset,
+        train_ds,
         steps_per_epoch=steps_per_epoch,
         validation_data=({"TCR_Input": X_val_tcr, "Epitope_Input": X_val_epi, "Physicochemical_Features": X_val_feat}, y_val),
         epochs=args.epochs,
