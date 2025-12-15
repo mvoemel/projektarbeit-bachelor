@@ -132,7 +132,7 @@ def run_tuning(args, model_module):
         early_stopping = EarlyStopping(
             monitor="val_roc_auc", 
             mode="max", # maximize AUC
-            patience=3, 
+            patience=5, 
             restore_best_weights=True
         )
         
@@ -163,7 +163,6 @@ def run_tuning(args, model_module):
         # Cleanup
         tf.keras.backend.clear_session()
         del model
-        del train_gen_trial  # Delete the trial generator
         gc.collect()
         
         return val_auc
@@ -182,7 +181,7 @@ def run_tuning(args, model_module):
         tags="checkered_flag"
     )
     
-    params_save_name = f"best_params_v{args.version}.txt"
+    params_save_name = f"best_params_v{args.version}_{EMBEDDING_DIM}_{EMBEDDING_TYPE}{args.tag}.txt"
     with open(os.path.join(OUTPUT_PREFIX, params_save_name), "w") as f:
         f.write(str(study.best_params))
 
@@ -251,7 +250,7 @@ def run_training(args, model_module):
         y_test, verbose=1, return_dict=True
     )
     
-    print(f"\nTest Results ({args.version}):")
+    print(f"\nTest Results (v{args.version}):")
     for k, v in results.items():
         print(f"{k}: {v:.4f}")
     
@@ -267,6 +266,11 @@ def run_training(args, model_module):
     save_name = f"{MODEL_NAME_PREFIX}_v{args.version}_{EMBEDDING_DIM}_{EMBEDDING_TYPE}{args.tag}.keras"
     model.save(os.path.join(OUTPUT_PREFIX, save_name))
     print(f"\nModel saved to {save_name}")
+    
+    # Cleanup
+    tf.keras.backend.clear_session()
+    del model
+    gc.collect()
 
 
 if __name__ == "__main__":
