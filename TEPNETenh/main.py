@@ -14,6 +14,10 @@ from data_loader import load_full_data_to_ram, create_balanced_memory_generator
 import requests
 import traceback
 
+# gpus = tf.config.list_physical_devices('GPU')
+# if gpus:
+#     for gpu in gpus:
+#         tf.config.experimental.set_memory_growth(gpu, True)
 
 print(f"GPU available: {tf.config.list_physical_devices('GPU')}")
 print(f"Built with CUDA: {tf.test.is_built_with_cuda()}")
@@ -22,7 +26,6 @@ print(f"Built with CUDA: {tf.test.is_built_with_cuda()}")
 # Configuration
 EMBEDDING_DIM = 64
 EMBEDDING_TYPE = 'pca'
-IS_BALANCED = False  # Dataset is 1:5 imbalanced
 SEED = 42
 
 DATA_PATH = './dataset/processed/'
@@ -74,7 +77,7 @@ def get_args():
 
 
 def run_tuning(args, model_module):
-    print(f"Starting Hyperparameter Tuning for v{args.version}...")
+    print(f"Starting Hyperparameter Tuning for v{args.version} using {args.optimizer}...")
     
     send_ntfy(
         f"Tuning Started - v{args.version}",
@@ -154,7 +157,7 @@ def run_tuning(args, model_module):
         if val_auc > best_auc_so_far:
             best_auc_so_far = val_auc
             send_ntfy(
-                f"New Best Trial - v{args.version}",
+                f"New Best Trial - v{args.version} - {args.optimizer}",
                 f"Trial {trial.number}: AUC={val_auc:.4f}\nLR={hparams['learning_rate']:.6f}, BS={hparams['batch_size']}, Layers={hparams['num_layers']}",
                 priority="default",
                 tags="star"
@@ -164,6 +167,9 @@ def run_tuning(args, model_module):
         tf.keras.backend.clear_session()
         del model
         gc.collect()
+        # if gpus:
+        #     for gpu in gpus:
+        #         tf.config.experimental.reset_memory_stats(gpu)
         
         return val_auc
 
@@ -187,7 +193,7 @@ def run_tuning(args, model_module):
 
 
 def run_training(args, model_module):
-    print(f"Starting Training for v{args.version}...")
+    print(f"Starting Training for v{args.version} using {args.optimizer}...")
     
     send_ntfy(
         f"Training Started - v{args.version}",

@@ -5,18 +5,22 @@ from tensorflow.keras.models import Model
 from layers import PiecewiseLinearEncoding, PeriodicEmbeddings
 import numpy as np
 
-# TODO: hyper param tuning
+# using SGD optimizer
 HYPER_PARAMETERS = {
-    "batch_size": 32,
-    "learning_rate": 0.0059,
-    "dropout_rate": 0.2414,
-    "l2_reg": 0.0082,
-    "ff_dim": 135,
-    "num_layers": 1,
-    "num_heads": 50,
-    "activation": "tanh",
-    "embed_numerical": "PLE"
+    'batch_size': 16, 
+    'learning_rate': 0.005674018095876286, 
+    'dropout_rate': 0.357649350688716, 
+    'l2_reg': 0.00018082955891304315, 
+    'ff_dim': 87, 
+    'num_layers': 2, 
+    'num_heads': 38, 
+    'activation': 'tanh', 
+    'embed_numerical': 'PLE'
 }
+
+# TODO: do tuning 
+# using ADAM optimizer
+# HYPER_PARAMETERS = {...}
 
 def create_model(hparams, embed_dim=64, feature_dim=12):
     print("Building Model v1 (Symmetric Cross-Attention)")

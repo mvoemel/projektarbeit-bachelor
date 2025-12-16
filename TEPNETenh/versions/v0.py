@@ -5,6 +5,7 @@ from tensorflow.keras.models import Model
 from layers import PiecewiseLinearEncoding, PeriodicEmbeddings
 import numpy as np
 
+# using SGD optimizer
 HYPER_PARAMETERS = {
     "batch_size": 32,
     "learning_rate": 0.0059,

@@ -6,18 +6,13 @@ from layers import PiecewiseLinearEncoding, PeriodicEmbeddings
 from transformer_block import transformer_block
 import numpy as np
 
-# TODO: hyper param tuning
-HYPER_PARAMETERS = {
-    "batch_size": 32,
-    "learning_rate": 0.0059,
-    "dropout_rate": 0.2414,
-    "l2_reg": 0.0082,
-    "ff_dim": 135,
-    "num_layers": 1,
-    "num_heads": 50,
-    "activation": "tanh",
-    "embed_numerical": "PLE"
-}
+# TODO: do tuning 
+# using SGD optimizer
+# HYPER_PARAMETERS = {...}
+
+# TODO: do tuning 
+# using ADAM optimizer
+# HYPER_PARAMETERS = {...}
 
 def create_model(hparams, embed_dim=64, feature_dim=12):
     print("Building Model v7 (Symmetric Cross-Attention + Transformer Block + Deep ResNet Classifier Head)")
