@@ -1,10 +1,7 @@
 import os
-# Disable XLA (Accelerated Linear Algebra)
-os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices=false'
-os.environ['TF_XLA_FLAGS'] = '--tf_xla_auto_jit=0'
+os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices=false --tf_xla_auto_jit=0'
 
 import tensorflow as tf
-# Enable GPU Memory Growth
 gpus = tf.config.list_physical_devices('GPU')
 print(f"GPU available: {gpus}")
 print(f"Built with CUDA: {tf.test.is_built_with_cuda()}")
@@ -14,6 +11,7 @@ if gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
     except RuntimeError as e:
         print(e)
+tf.config.optimizer.set_jit(False)
 
 from tensorflow.keras.callbacks import EarlyStopping, Callback
 from tensorflow.keras.metrics import AUC, Precision, Recall
