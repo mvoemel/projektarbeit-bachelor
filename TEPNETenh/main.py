@@ -1,11 +1,26 @@
+import os
+# Disable XLA (Accelerated Linear Algebra)
+os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices=false'
+os.environ['TF_XLA_FLAGS'] = '--tf_xla_auto_jit=0'
+
 import tensorflow as tf
+# Enable GPU Memory Growth
+gpus = tf.config.list_physical_devices('GPU')
+print(f"GPU available: {gpus}")
+print(f"Built with CUDA: {tf.test.is_built_with_cuda()}")
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
+
 from tensorflow.keras.callbacks import EarlyStopping, Callback
 from tensorflow.keras.metrics import AUC, Precision, Recall
 from sklearn.metrics import confusion_matrix
 import numpy as np
 import pandas as pd
 import gc
-import os
 import argparse
 import importlib
 import optuna
@@ -13,14 +28,6 @@ from optuna.samplers import TPESampler
 from data_loader import load_full_data_to_ram, create_balanced_memory_generator
 import requests
 import traceback
-
-# gpus = tf.config.list_physical_devices('GPU')
-# if gpus:
-#     for gpu in gpus:
-#         tf.config.experimental.set_memory_growth(gpu, True)
-
-print(f"GPU available: {tf.config.list_physical_devices('GPU')}")
-print(f"Built with CUDA: {tf.test.is_built_with_cuda()}")
 
 
 # Configuration
@@ -36,7 +43,7 @@ OUTPUT_PREFIX = './output/'
 MODEL_NAME_PREFIX = 'TEPNETenh_model'
 
 USE_NTFY_FEATURE = False
-NTFY_TOPIC = "tepnetenh-training-jobs-alerts-195739xyzqwer" # Change this to your topic
+NTFY_TOPIC = "tepnetenh-training-jobs-alerts-202512xyzqwer"
 NTFY_SERVER = "https://ntfy.sh"
 
 
@@ -167,9 +174,6 @@ def run_tuning(args, model_module):
         tf.keras.backend.clear_session()
         del model
         gc.collect()
-        # if gpus:
-        #     for gpu in gpus:
-        #         tf.config.experimental.reset_memory_stats(gpu)
         
         return val_auc
 

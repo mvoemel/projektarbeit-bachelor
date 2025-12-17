@@ -62,6 +62,9 @@ The scripts assume you have a `dataset/processed` directory with the following f
 # Start a new screen session
 screen -S training
 
+# Activate python environment (e.g. conda)
+conda activate tensorflow-env
+
 # Run your script
 ./run_jobs.sh
 
@@ -103,14 +106,14 @@ _(Press `Ctrl+C` to stop watching; the training continues in the background.)_
 **Two Component Combinations**
 
 - (_v2_) Baseline + Symmetric Cross-Attention + Transformer Block
-- (_v3_) Baseline + Symmetric Cross-Attention + Interaction Map (2D CNN) (**LOW prio**)
-- (_v4_) Baseline + Symmetric Cross-Attention + Deep ResNet Classifier Head (**LOW prio**)
+- (_v3_) Baseline + Symmetric Cross-Attention + Interaction Map (2D CNN)
+- (_v4_) Baseline + Symmetric Cross-Attention + Deep ResNet Classifier Head
 
 **Multi-Component Architectures**
 
-- (_v5_) Baseline + Symmetric Cross-Attention + Interaction Map (2D CNN) + Deep ResNet Classifier Head (**LOW prio**)
-- (_v6_) Baseline + Symmetric Cross-Attention + Transformer Block + Interaction Map (2D CNN) (**MIDDLE prio**)
-- (_v7_) Baseline + Symmetric Cross-Attention + Transformer Block + Deep ResNet Classifier Head (**MIDDLE prio**)
+- (_v5_) Baseline + Symmetric Cross-Attention + Interaction Map (2D CNN) + Deep ResNet Classifier Head
+- (_v6_) Baseline + Symmetric Cross-Attention + Transformer Block + Interaction Map (2D CNN)
+- (_v7_) Baseline + Symmetric Cross-Attention + Transformer Block + Deep ResNet Classifier Head
 
 **Full Architecture**
 
