@@ -5,9 +5,18 @@ from tensorflow.keras.models import Model
 from layers import PiecewiseLinearEncoding, PeriodicEmbeddings
 import numpy as np
 
-# TODO: do tuning 
 # using SGD optimizer
-# HYPER_PARAMETERS = {...}
+HYPER_PARAMETERS = {
+    'batch_size': 64, 
+    'learning_rate': 0.005285426279175433, 
+    'dropout_rate': 0.46594630836578194, 
+    'l2_reg': 4.047725053283987e-05, 
+    'ff_dim': 123, 
+    'num_layers': 2, 
+    'num_heads': 12, 
+    'activation': 'tanh', 
+    'embed_numerical': 'Periodic'
+}
 
 # TODO: do tuning 
 # using ADAM optimizer
