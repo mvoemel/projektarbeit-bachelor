@@ -48,7 +48,7 @@ VALIDATION_FILE = f'validation_ProtBERT_{EMBEDDING_DIM}_{EMBEDDING_TYPE}.h5'
 TEST_FILE = f'test_ProtBERT_{EMBEDDING_DIM}_{EMBEDDING_TYPE}.h5'
 OUTPUT_PREFIX = './output/'
 MODEL_NAME_PREFIX = 'TEPNETenh_model'
-LOGS_DIR = './logs'
+LOGS_DIR_NAME = 'logs'
 
 USE_NTFY_FEATURE = False
 NTFY_TOPIC = "tepnetenh-training-jobs-alerts-202512xyzqwer"
@@ -192,9 +192,8 @@ def run_tuning(args, model_module):
             del model
             gc.collect()
     
-    os.makedirs(LOGS_DIR, exist_ok=True)
-    # TODO: change use LOGS_DIR
-    db_path = f"sqlite:///logs/optuna_study_v{args.version}_{args.optimizer}.db"
+    os.makedirs(LOGS_DIR_NAME, exist_ok=True)
+    db_path = f"sqlite:///{LOGS_DIR_NAME}/optuna_study_v{args.version}_{args.optimizer}.db"
 
     study = optuna.create_study(
         study_name=f"v{args.version}_{args.optimizer}",
@@ -314,6 +313,8 @@ def run_training(args, model_module):
 
 
 if __name__ == "__main__":
+    print(f"CWD: {os.getcwd()}")
+    
     os.makedirs(OUTPUT_PREFIX, exist_ok=True)
     
     np.random.seed(SEED)
