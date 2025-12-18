@@ -185,6 +185,14 @@ def run_tuning(args, model_module):
         except (CancelledError, InternalError) as e:
             # Log as failed in Optuna and move to next trial
             print(f"Trial failed due to GPU/XLA Math Error: {e}")
+            
+            send_ntfy(
+                f"Trial #{trial.number} pruned - v{args.version} - {args.optimizer}",
+                f"Feed_Forward_Dim={hparams['ff_dim']}, Layers={hparams['num_layers']}, Heads={hparams['num_heads']}",
+                priority="default",
+                tags="x"
+            )
+            
             raise optuna.exceptions.TrialPruned()
         finally:
             # Cleanup
