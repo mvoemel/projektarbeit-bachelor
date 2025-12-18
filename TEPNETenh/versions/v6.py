@@ -6,9 +6,18 @@ from layers import PiecewiseLinearEncoding, PeriodicEmbeddings
 from transformer_block import transformer_block
 import numpy as np
 
-# TODO: do tuning 
 # using SGD optimizer
-# HYPER_PARAMETERS = {...}
+HYPER_PARAMETERS = {
+    'batch_size': 16, 
+    'learning_rate': 0.0019879809384288102, 
+    'dropout_rate': 0.3316929188322714, 
+    'l2_reg': 0.009956055660659066, 
+    'ff_dim': 141, 
+    'num_layers': 2, 
+    'num_heads': 41, 
+    'activation': 'leaky_relu', 
+    'embed_numerical': 'PLE'
+}
 
 # TODO: do tuning 
 # using ADAM optimizer

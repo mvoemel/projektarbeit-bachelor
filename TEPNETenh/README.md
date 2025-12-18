@@ -1,6 +1,6 @@
 # TEPNETenh
 
-This approach to training a model that predicts the binding of TCR and epitope starts with the processed data from the Master project thesis called _TEP-NET: A Deep Neural Network for TCR-Epitope Binding Prediction Using Physicochemical and Embedding Features_ from _Sven De Gasparo_ and _Prof. Dr. Jasmina Bogojeska_ at _Zurich University of Applied Sciences (ZHAW)_ in Switzerland. It assumes that the dataset is 1:5 (pos:neg) imbalanced and uses ProtBERT embeddings of `64` dimensions fitted with `PCA`.
+This approach to training a model that predicts the binding of TCR and epitope starts with the processed data from the Master project thesis called _TEP-NET: A Deep Neural Network for TCR-Epitope Binding Prediction Using Physicochemical and Embedding Features_ from _Sven De Gasparo_ and _Prof. Dr. Jasmina Bogojeska_ at _Zurich University of Applied Sciences (ZHAW)_ in Switzerland. It assumes that the dataset is 1:5 (pos:neg) imbalanced and uses ProtBERT embeddings of `64` dimensions fitted with `PCA`. We assume max length of `TCR` is `26` and max length of `epitope` is `24`.
 
 If you want to check out which train/tune runs have been done visit the `log_book.ipynb` notebook. If you want to see the evaluation of the different models visit the `evaluation.ipynb` notebook.
 
