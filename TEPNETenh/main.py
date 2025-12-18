@@ -193,6 +193,7 @@ def run_tuning(args, model_module):
             gc.collect()
     
     os.makedirs(LOGS_DIR, exist_ok=True)
+    # TODO: change use LOGS_DIR
     db_path = f"sqlite:///logs/optuna_study_v{args.version}_{args.optimizer}.db"
 
     study = optuna.create_study(
