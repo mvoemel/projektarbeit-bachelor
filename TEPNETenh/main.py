@@ -118,7 +118,8 @@ def run_tuning(args, model_module):
             "l2_reg": trial.suggest_float('l2_reg', 1e-5, 1e-2, log=True),
             "ff_dim": trial.suggest_int('ff_dim', 16, 200),
             "num_layers": trial.suggest_int('num_layers', 1, 5),
-            "num_heads": trial.suggest_int('num_heads', 2, 50),
+            # "num_heads": trial.suggest_int('num_heads', 2, 50),
+            "num_heads": trial.suggest_int('num_heads', [2, 4, 8, 12, 16, 24, 32]),
             "activation": trial.suggest_categorical('activation', ['relu', 'tanh', 'leaky_relu']),
             "embed_numerical": trial.suggest_categorical('embed_numerical', ['PLE', 'Periodic'])
         }
