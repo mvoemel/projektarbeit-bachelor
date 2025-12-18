@@ -1,6 +1,6 @@
 import os
 
-# Ensure XLA is truly off and fix the flag overwrite bug
+# Ensure XLA is truly off
 os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices=false --tf_xla_auto_jit=0'
 os.environ['XLA_FLAGS'] = '--xla_gpu_autotune_level=0' # Disables the specific tuner that's crashing
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # Reduce log spam
@@ -10,6 +10,7 @@ import tensorflow as tf
 # Force JIT off at the TF level
 tf.config.optimizer.set_jit(False)
 
+# Set Memory growth instead of TF claiming all memory
 gpus = tf.config.list_physical_devices('GPU')
 print(f"GPU available: {gpus}")
 print(f"Built with CUDA: {tf.test.is_built_with_cuda()}")
@@ -22,6 +23,7 @@ if gpus:
 
 from tensorflow.keras.callbacks import EarlyStopping, Callback
 from tensorflow.keras.metrics import AUC, Precision, Recall
+from tensorflow.python.framework.errors_impl import CancelledError, InternalError
 from sklearn.metrics import confusion_matrix
 import numpy as np
 import pandas as pd
@@ -46,6 +48,7 @@ VALIDATION_FILE = f'validation_ProtBERT_{EMBEDDING_DIM}_{EMBEDDING_TYPE}.h5'
 TEST_FILE = f'test_ProtBERT_{EMBEDDING_DIM}_{EMBEDDING_TYPE}.h5'
 OUTPUT_PREFIX = './output/'
 MODEL_NAME_PREFIX = 'TEPNETenh_model'
+LOGS_DIR = './logs'
 
 USE_NTFY_FEATURE = False
 NTFY_TOPIC = "tepnetenh-training-jobs-alerts-202512xyzqwer"
@@ -119,7 +122,7 @@ def run_tuning(args, model_module):
             "ff_dim": trial.suggest_int('ff_dim', 16, 200),
             "num_layers": trial.suggest_int('num_layers', 1, 5),
             # "num_heads": trial.suggest_int('num_heads', 2, 50),
-            "num_heads": trial.suggest_int('num_heads', [2, 4, 8, 12, 16, 24, 32]),
+            "num_heads": trial.suggest_categorical('num_heads', [2, 4, 8, 12, 16, 24, 32, 48]),
             "activation": trial.suggest_categorical('activation', ['relu', 'tanh', 'leaky_relu']),
             "embed_numerical": trial.suggest_categorical('embed_numerical', ['PLE', 'Periodic'])
         }
@@ -137,54 +140,74 @@ def run_tuning(args, model_module):
         else:
             optimizer = tf.keras.optimizers.Adam(learning_rate=hparams['learning_rate'], clipnorm=1.0)
 
-        model = model_module.create_model(hparams, embed_dim=EMBEDDING_DIM)
-        
-        model.compile(
-            optimizer=optimizer, 
-            loss='binary_crossentropy', 
-            metrics=[tf.keras.metrics.AUC(name='roc_auc')]
-        )
-        
-        early_stopping = EarlyStopping(
-            monitor="val_roc_auc", 
-            mode="max", # maximize AUC
-            patience=5, 
-            restore_best_weights=True
-        )
-        
-        history = model.fit(
-            train_ds,
-            steps_per_epoch=steps_per_epoch,
-            validation_data=(
-                {"TCR_Input": X_val_tcr, "Epitope_Input": X_val_epi, "Physicochemical_Features": X_val_feat}, 
-                y_val
-            ),
-            epochs=args.epochs,
-            verbose=0,
-            callbacks=[early_stopping]
-        )
-        
-        val_auc = max(history.history['val_roc_auc'])
-        
-        # Notify on new best
-        if val_auc > best_auc_so_far:
-            best_auc_so_far = val_auc
-            send_ntfy(
-                f"New Best Trial - v{args.version} - {args.optimizer}",
-                f"Trial {trial.number}: AUC={val_auc:.4f}\nLR={hparams['learning_rate']:.6f}, BS={hparams['batch_size']}, Layers={hparams['num_layers']}",
-                priority="default",
-                tags="star"
-            )
-        
-        # Cleanup
-        tf.keras.backend.clear_session()
-        del model
-        gc.collect()
-        
-        return val_auc
 
-    study = optuna.create_study(direction="maximize", sampler=TPESampler(seed=SEED))
-    study.optimize(objective, n_trials=args.trials)
+        try:
+            model = model_module.create_model(hparams, embed_dim=EMBEDDING_DIM)
+
+            model.compile(
+                optimizer=optimizer, 
+                loss='binary_crossentropy', 
+                metrics=[tf.keras.metrics.AUC(name='roc_auc')]
+            )
+
+            early_stopping = EarlyStopping(
+                monitor="val_roc_auc", 
+                mode="max", # maximize AUC
+                patience=5, 
+                restore_best_weights=True
+            )
+
+            history = model.fit(
+                train_ds,
+                steps_per_epoch=steps_per_epoch,
+                validation_data=(
+                    {"TCR_Input": X_val_tcr, "Epitope_Input": X_val_epi, "Physicochemical_Features": X_val_feat}, 
+                    y_val
+                ),
+                epochs=args.epochs,
+                verbose=0,
+                callbacks=[early_stopping]
+            )
+
+            val_auc = max(history.history['val_roc_auc'])
+
+            # Notify on new best
+            if val_auc > best_auc_so_far:
+                best_auc_so_far = val_auc
+                send_ntfy(
+                    f"New Best Trial - v{args.version} - {args.optimizer}",
+                    f"Trial {trial.number}: AUC={val_auc:.4f}\nLR={hparams['learning_rate']:.6f}, BS={hparams['batch_size']}, Layers={hparams['num_layers']}",
+                    priority="default",
+                    tags="star"
+                )
+
+            return val_auc
+        except (CancelledError, InternalError) as e:
+            # Log as failed in Optuna and move to next trial
+            print(f"Trial failed due to GPU/XLA Math Error: {e}")
+            raise optuna.exceptions.TrialPruned()
+        finally:
+            # Cleanup
+            tf.keras.backend.clear_session()
+            del model
+            gc.collect()
+    
+    os.makedirs(LOGS_DIR, exist_ok=True)
+    db_path = f"sqlite:///logs/optuna_study_v{args.version}_{args.optimizer}.db"
+
+    study = optuna.create_study(
+        study_name=f"v{args.version}_{args.optimizer}",
+        storage=db_path,
+        load_if_exists=True,
+        direction="maximize", 
+        sampler=TPESampler(seed=SEED)
+    )
+    
+    study.optimize(
+        objective, 
+        n_trials=args.trials, 
+        catch=(CancelledError, InternalError, Exception)
+    )
     
     print("Best Parameters:", study.best_params)
     
