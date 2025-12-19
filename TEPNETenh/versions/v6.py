@@ -19,9 +19,18 @@ HYPER_PARAMETERS = {
     'embed_numerical': 'PLE'
 }
 
-# TODO: do tuning 
 # using ADAM optimizer
-# HYPER_PARAMETERS = {...}
+HYPER_PARAMETERS = {
+    'batch_size': 32, 
+    'learning_rate': 0.0009070418872442555, 
+    'dropout_rate': 0.07029984566604908, 
+    'l2_reg': 0.007058882123454644, 
+    'ff_dim': 116, 
+    'num_layers': 4, 
+    'num_heads': 33, 
+    'activation': 'tanh', 
+    'embed_numerical': 'PLE'
+}
 
 def create_model(hparams, embed_dim=64, feature_dim=12):
     print("Building Model v6 (Symmetric Cross-Attention + Transformer Block + Interaction Map (2D CNN))")

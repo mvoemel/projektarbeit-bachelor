@@ -118,3 +118,12 @@ _(Press `Ctrl+C` to stop watching; the training continues in the background.)_
 **Full Architecture**
 
 - (_v8_) Baseline + Symmetric Cross-Attention + Transformer Block + Interaction Map (2D CNN) + Deep ResNet Classifier Head
+
+## Troubleshooting
+
+**`Can't synchronously read data`**:
+
+```bash
+sudo apt clean
+sudo sync; echo 3 | sudo tee /proc/sys/vm/drop_caches
+```
