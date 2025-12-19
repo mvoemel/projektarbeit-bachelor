@@ -292,10 +292,16 @@ def run_training(args, model_module):
     test_file = os.path.join(DATA_PATH, TEST_FILE)
     X_test_tcr, X_test_epi, X_test_feat, y_test = load_full_data_to_ram(test_file)
     
+    test_ds = tf.data.Dataset.from_tensor_slices((
+        {"TCR_Input": X_test_tcr, "Epitope_Input": X_test_epi, "Physicochemical_Features": X_test_feat}, 
+        y_test
+    )).batch(1) # batch size 1
+
     print("\nEvaluating on Test Set...")
     results = model.evaluate(
-        {"TCR_Input": X_test_tcr, "Epitope_Input": X_test_epi, "Physicochemical_Features": X_test_feat}, 
-        y_test, verbose=1, return_dict=True, batch_size=1
+        test_ds,
+        verbose=1, 
+        return_dict=True
     )
     
     print(f"\nTest Results (v{args.version}):")
