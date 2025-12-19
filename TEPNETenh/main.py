@@ -294,7 +294,7 @@ def run_training(args, model_module):
     print("\nEvaluating on Test Set...")
     results = model.evaluate(
         {"TCR_Input": X_test_tcr, "Epitope_Input": X_test_epi, "Physicochemical_Features": X_test_feat}, 
-        y_test, verbose=1, return_dict=True
+        y_test, verbose=1, return_dict=True, batch_size=1
     )
     
     print(f"\nTest Results (v{args.version}):")
