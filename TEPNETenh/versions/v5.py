@@ -18,9 +18,18 @@ HYPER_PARAMETERS = {
     'embed_numerical': 'Periodic'
 }
 
-# TODO: do tuning 
 # using ADAM optimizer
-# HYPER_PARAMETERS = {...}
+HYPER_PARAMETERS = {
+    'batch_size': 32, 
+    'learning_rate': 0.0003132071576424828, 
+    'dropout_rate': 0.00396683619911593, 
+    'l2_reg': 1.8144367529691835e-05, 
+    'ff_dim': 47, 
+    'num_layers': 4, 
+    'num_heads': 22, 
+    'activation': 'tanh', 
+    'embed_numerical': 'PLE'
+}
 
 def create_model(hparams, embed_dim=64, feature_dim=12):
     print("Building Model v5 (Symmetric Cross-Attention + Interaction Map (2D CNN) + Deep ResNet Classifier Head)")
