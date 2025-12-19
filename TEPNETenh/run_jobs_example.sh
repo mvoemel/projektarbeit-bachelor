@@ -53,7 +53,6 @@ python main.py --version 0 --mode TRAIN --optimizer SGD --epochs 30 --tag _basel
 # python main.py --version 7 --mode TRAIN --optimizer ADAM --epochs 30 --tag _adam --ntfy True --ntfy_topic $NTFY_TOPIC > logs/v7_train_adam.log 2>&1 || notify "v7 TRAIN ADAM Failed"
 # python main.py --version 8 --mode TRAIN --optimizer ADAM --epochs 30 --tag _adam --ntfy True --ntfy_topic $NTFY_TOPIC > logs/v8_train_adam.log 2>&1 || notify "v8 TRAIN ADAM Failed"
 
-
 notify "🎉 All Jobs Completed"
 
 echo "All Jobs Completed!"

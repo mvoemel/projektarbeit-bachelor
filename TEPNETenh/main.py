@@ -1,9 +1,10 @@
 import os
 
-# Ensure XLA is truly off
+# Ensure XLA and cuDNN autotuning is off
 os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices=false --tf_xla_auto_jit=0'
 os.environ['XLA_FLAGS'] = '--xla_gpu_autotune_level=0' # Disables the specific tuner that's crashing
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # Reduce log spam
+os.environ['TF_CUDNN_USE_AUTOTUNE'] = '0'
 
 import tensorflow as tf
 
