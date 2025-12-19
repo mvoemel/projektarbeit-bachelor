@@ -1,5 +1,8 @@
 import os
 
+# NVIDIA Async allocator instead of the default BFC allocator
+os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
+
 # Ensure XLA and cuDNN autotuning is off
 os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices=false --tf_xla_auto_jit=0'
 os.environ['XLA_FLAGS'] = '--xla_gpu_autotune_level=0' # Disables the specific tuner that's crashing
