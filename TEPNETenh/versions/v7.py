@@ -6,7 +6,7 @@ from layers import PiecewiseLinearEncoding, PeriodicEmbeddings
 from transformer_block import transformer_block
 import numpy as np
 
-# using SGD optimizer
+# using SGD optimizer (better AUC)
 HYPER_PARAMETERS = {
     'batch_size': 128, 
     'learning_rate': 0.009272361819517416, 
@@ -20,17 +20,17 @@ HYPER_PARAMETERS = {
 }
 
 # using ADAM optimizer
-HYPER_PARAMETERS = {
-    'batch_size': 128, 
-    'learning_rate': 0.00014580160670561796, 
-    'dropout_rate': 0.4981126922026228, 
-    'l2_reg': 0.000453617845185874, 
-    'ff_dim': 111, 
-    'num_layers': 5, 
-    'num_heads': 10, 
-    'activation': 'relu', 
-    'embed_numerical': 'Periodic'
-}
+# HYPER_PARAMETERS = {
+#     'batch_size': 128, 
+#     'learning_rate': 0.00014580160670561796, 
+#     'dropout_rate': 0.4981126922026228, 
+#     'l2_reg': 0.000453617845185874, 
+#     'ff_dim': 111, 
+#     'num_layers': 5, 
+#     'num_heads': 10, 
+#     'activation': 'relu', 
+#     'embed_numerical': 'Periodic'
+# }
 
 def create_model(hparams, embed_dim=64, feature_dim=12):
     print("Building Model v7 (Symmetric Cross-Attention + Transformer Block + Deep ResNet Classifier Head)")

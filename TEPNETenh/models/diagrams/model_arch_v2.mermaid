@@ -1,0 +1,108 @@
+graph TD
+    subgraph Inputs
+        A[TCR Input<br/>Shape: 26 × 64]
+        B[Epitope Input<br/>Shape: 24 × 64]
+        C[Physicochemical Features<br/>Shape: 12]
+    end
+    
+    subgraph "Transformer Block 1 (TCR Path)"
+        D1[Multi-Head Attention<br/>TCR → Epitope]
+        D2[Add & Norm]
+        D3[Feed-Forward]
+        D4[Add & Norm]
+    end
+    
+    subgraph "Transformer Block 2 (Epitope Path)"
+        E1[Multi-Head Attention<br/>Epitope → TCR]
+        E2[Add & Norm]
+        E3[Feed-Forward]
+        E4[Add & Norm]
+    end
+    
+    subgraph "Attention Pooling"
+        F[Global Average Pooling 1D<br/>TCR branch]
+        G[Global Average Pooling 1D<br/>Epitope branch]
+    end
+    
+    subgraph "Attention Fusion"
+        H[Concatenate<br/>pool_tcr + pool_epi]
+    end
+    
+    subgraph "Feature Processing"
+        I{embed_numerical<br/>type?}
+        J[PiecewiseLinearEncoding<br/>bins: 11]
+        K[PeriodicEmbeddings<br/>frequencies: 16]
+        L[Flatten]
+    end
+    
+    subgraph "Final Fusion"
+        M[Concatenate<br/>attention + features]
+    end
+    
+    subgraph "Feed-Forward Network"
+        N[Dense Layer]
+        O[Dropout]
+        P{num_layers<br/>iterations}
+    end
+    
+    subgraph Output
+        Q[Dense Layer<br/>units: 1<br/>activation: sigmoid]
+        R[Binding Prediction<br/>0-1 probability]
+    end
+    
+    A -->|query| D1
+    B -->|key/value| D1
+    D1 --> D2
+    D2 --> D3
+    D3 --> D4
+    D4 --> F
+    
+    B -->|query| E1
+    A -->|key/value| E1
+    E1 --> E2
+    E2 --> E3
+    E3 --> E4
+    E4 --> G
+    
+    F --> H
+    G --> H
+    
+    H --> M
+    
+    C --> I
+    I -->|PLE| J
+    I -->|Periodic| K
+    J --> L
+    K --> L
+    L --> M
+    
+    M --> N
+    N --> O
+    O --> P
+    P -->|repeat| N
+    P -->|continue| Q
+    Q --> R
+    
+    style A fill:#4a90e2,color:#fff
+    style B fill:#4a90e2,color:#fff
+    style C fill:#4a90e2,color:#fff
+    style D1 fill:#f5a623,color:#fff
+    style D2 fill:#ff6b6b,color:#fff
+    style D3 fill:#ffd93d,color:#000
+    style D4 fill:#ff6b6b,color:#fff
+    style E1 fill:#f5a623,color:#fff
+    style E2 fill:#ff6b6b,color:#fff
+    style E3 fill:#ffd93d,color:#000
+    style E4 fill:#ff6b6b,color:#fff
+    style F fill:#9013fe,color:#fff
+    style G fill:#9013fe,color:#fff
+    style H fill:#d946ef,color:#fff
+    style I fill:#06b6d4,color:#fff
+    style J fill:#06b6d4,color:#fff
+    style K fill:#06b6d4,color:#fff
+    style L fill:#06b6d4,color:#fff
+    style M fill:#50e3c2,color:#000
+    style N fill:#e74c3c,color:#fff
+    style O fill:#e74c3c,color:#fff
+    style Q fill:#e91e63,color:#fff
+    style R fill:#27ae60,color:#fff

@@ -6,7 +6,7 @@ from layers import PiecewiseLinearEncoding, PeriodicEmbeddings
 from transformer_block import transformer_block
 import numpy as np
 
-# using SGD optimizer (better)
+# using SGD optimizer (better AUC)
 HYPER_PARAMETERS = {
     'batch_size': 32, 
     'learning_rate': 0.0059030125874360165, 

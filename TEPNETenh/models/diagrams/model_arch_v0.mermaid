@@ -1,0 +1,66 @@
+graph TD
+    subgraph Inputs
+        A[TCR Input<br/>Shape: 26 × 64]
+        B[Epitope Input<br/>Shape: 24 × 64]
+        C[Physicochemical Features<br/>Shape: 12]
+    end
+    
+    subgraph "Multi-Head Attention Layer"
+        D[Multi-Head Attention]
+    end
+    
+    subgraph "Feature Processing"
+        E{embed_numerical<br/>type?}
+        F[PiecewiseLinearEncoding<br/>bins: 11]
+        G[PeriodicEmbeddings<br/>frequencies: 16]
+        H[Flatten]
+    end
+    
+    subgraph "Attention Pooling"
+        I[Global Average Pooling 1D]
+    end
+    
+    subgraph "Feature Fusion"
+        J[Concatenate]
+    end
+    
+    subgraph "Feed-Forward Network"
+        K[Dense Layer]
+        L[Dropout]
+        M{num_layers<br/>iterations}
+    end
+    
+    subgraph Output
+        N[Dense Layer<br/>units: 1<br/>activation: sigmoid]
+        O[Binding Prediction<br/>0-1 probability]
+    end
+    
+    A -->|query| D
+    B -->|value| D
+    D --> I
+    I --> J
+    
+    C --> E
+    E -->|PLE| F
+    E -->|Periodic| G
+    F --> H
+    G --> H
+    H --> J
+    
+    J --> K
+    K --> L
+    L --> M
+    M -->|repeat| K
+    M -->|continue| N
+    N --> O
+    
+    style A fill:#4a90e2,color:#fff
+    style B fill:#4a90e2,color:#fff
+    style C fill:#4a90e2,color:#fff
+    style D fill:#f5a623,color:#fff
+    style I fill:#9013fe,color:#fff
+    style J fill:#50e3c2,color:#000
+    style K fill:#e74c3c,color:#fff
+    style L fill:#e74c3c,color:#fff
+    style N fill:#e91e63,color:#fff
+    style O fill:#27ae60,color:#fff

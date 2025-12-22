@@ -5,7 +5,7 @@ from tensorflow.keras.models import Model
 from layers import PiecewiseLinearEncoding, PeriodicEmbeddings
 import numpy as np
 
-# using SGD optimizer
+# using SGD optimizer (better AUC)
 HYPER_PARAMETERS = {
     'batch_size': 16, 
     'learning_rate': 0.006393277610030755, 
@@ -19,17 +19,17 @@ HYPER_PARAMETERS = {
 }
 
 # using ADAM optimizer
-HYPER_PARAMETERS = {
-    'batch_size': 128, 
-    'learning_rate': 0.00853618986286683, 
-    'dropout_rate': 0.40419867405823057, 
-    'l2_reg': 8.200518402245828e-05, 
-    'ff_dim': 34, 
-    'num_layers': 4, 
-    'num_heads': 23, 
-    'activation': 'tanh', 
-    'embed_numerical': 'PLE'
-}
+# HYPER_PARAMETERS = {
+#     'batch_size': 128, 
+#     'learning_rate': 0.00853618986286683, 
+#     'dropout_rate': 0.40419867405823057, 
+#     'l2_reg': 8.200518402245828e-05, 
+#     'ff_dim': 34, 
+#     'num_layers': 4, 
+#     'num_heads': 23, 
+#     'activation': 'tanh', 
+#     'embed_numerical': 'PLE'
+# }
 
 def create_model(hparams, embed_dim=64, feature_dim=12):
     print("Building Model v4 (Symmetric Cross-Attention + Deep ResNet Classifier Head)")

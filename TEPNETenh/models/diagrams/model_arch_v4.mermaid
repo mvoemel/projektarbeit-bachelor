@@ -1,0 +1,103 @@
+graph TD
+    subgraph Inputs
+        A[TCR Input<br/>Shape: 26 × 64]
+        B[Epitope Input<br/>Shape: 24 × 64]
+        C[Physicochemical Features<br/>Shape: 12]
+    end
+    
+    subgraph "Symmetric Cross-Attention"
+        D[Multi-Head Attention 1<br/>TCR → Epitope]
+        E[Multi-Head Attention 2<br/>Epitope → TCR]
+    end
+    
+    subgraph "Attention Pooling"
+        F[Global Average Pooling 1D<br/>TCR branch]
+        G[Global Average Pooling 1D<br/>Epitope branch]
+    end
+    
+    subgraph "Attention Fusion"
+        H[Concatenate<br/>pool_tcr + pool_epi]
+    end
+    
+    subgraph "Feature Processing"
+        I{embed_numerical<br/>type?}
+        J[PiecewiseLinearEncoding<br/>bins: 11]
+        K[PeriodicEmbeddings<br/>frequencies: 16]
+        L[Flatten]
+    end
+    
+    subgraph "Final Fusion"
+        M[Concatenate<br/>attention + features]
+    end
+    
+    subgraph "Deep ResNet Classifier Head"
+        N1[Dense Block 1]
+        N2[Dropout]
+        N3[Dense Block 2]
+        N4[Dropout]
+        N5[Dimension Match<br/>if needed]
+        N6[Add<br/>Residual Connection]
+        N7[Layer Normalization]
+        N8{num_layers<br/>iterations}
+    end
+    
+    subgraph Output
+        O[Dense Layer<br/>units: 1<br/>activation: sigmoid]
+        P[Binding Prediction<br/>0-1 probability]
+    end
+    
+    A -->|query| D
+    B -->|value| D
+    B -->|query| E
+    A -->|value| E
+    
+    D --> F
+    E --> G
+    
+    F --> H
+    G --> H
+    
+    H --> M
+    
+    C --> I
+    I -->|PLE| J
+    I -->|Periodic| K
+    J --> L
+    K --> L
+    L --> M
+    
+    M --> N1
+    M -.->|residual| N5
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N6
+    N5 -.-> N6
+    N6 --> N7
+    N7 --> N8
+    N8 -->|repeat| N1
+    N8 -->|continue| O
+    O --> P
+    
+    style A fill:#4a90e2,color:#fff
+    style B fill:#4a90e2,color:#fff
+    style C fill:#4a90e2,color:#fff
+    style D fill:#f5a623,color:#fff
+    style E fill:#f5a623,color:#fff
+    style F fill:#9013fe,color:#fff
+    style G fill:#9013fe,color:#fff
+    style H fill:#d946ef,color:#fff
+    style I fill:#06b6d4,color:#fff
+    style J fill:#06b6d4,color:#fff
+    style K fill:#06b6d4,color:#fff
+    style L fill:#06b6d4,color:#fff
+    style M fill:#50e3c2,color:#000
+    style N1 fill:#e74c3c,color:#fff
+    style N2 fill:#c0392b,color:#fff
+    style N3 fill:#e74c3c,color:#fff
+    style N4 fill:#c0392b,color:#fff
+    style N5 fill:#95a5a6,color:#fff
+    style N6 fill:#16a085,color:#fff
+    style N7 fill:#1abc9c,color:#fff
+    style O fill:#e91e63,color:#fff
+    style P fill:#27ae60,color:#fff

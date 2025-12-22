@@ -1,0 +1,121 @@
+graph TD
+    subgraph Inputs
+        A[TCR Input<br/>Shape: 26 × 64]
+        B[Epitope Input<br/>Shape: 24 × 64]
+        C[Physicochemical Features<br/>Shape: 12]
+    end
+    
+    subgraph "Branch 1: Symmetric Transformer Blocks"
+        subgraph "Transformer Block 1 (TCR Path)"
+            D1[Multi-Head Attention<br/>TCR → Epitope]
+            D2[Add & Norm]
+            D3[Feed-Forward]
+            D4[Add & Norm]
+        end
+        D5[Global Average Pooling 1D<br/>TCR branch]
+        
+        subgraph "Transformer Block 2 (Epitope Path)"
+            E1[Multi-Head Attention<br/>Epitope → TCR]
+            E2[Add & Norm]
+            E3[Feed-Forward]
+            E4[Add & Norm]
+        end
+        E5[Global Average Pooling 1D<br/>Epitope branch]
+    end
+    
+    subgraph "Branch 2: Interaction Map (2D CNN)"
+        F1[Dot Product<br/>TCR × Epitope<br/>Shape: 26 × 24]
+        F2[Reshape<br/>Add channel dim<br/>Shape: 26 × 24 × 1]
+        F3[Conv2D Layer 1<br/>filters: 32<br/>kernel: 3×3<br/>activation: relu]
+        F4[Conv2D Layer 2<br/>filters: 64<br/>kernel: 3×3<br/>activation: relu]
+        F5[Global Max Pooling 2D]
+    end
+    
+    subgraph "Branch 3: Feature Processing"
+        G1{embed_numerical<br/>type?}
+        G2[PiecewiseLinearEncoding<br/>bins: 11]
+        G3[PeriodicEmbeddings<br/>frequencies: 16]
+        G4[Flatten]
+    end
+    
+    subgraph "Multi-Branch Fusion"
+        H[Concatenate<br/>transformer + CNN + features]
+    end
+    
+    subgraph "Feed-Forward Network"
+        I[Dense Layer]
+        J[Dropout]
+        K{num_layers<br/>iterations}
+    end
+    
+    subgraph Output
+        L[Dense Layer<br/>units: 1<br/>activation: sigmoid]
+        M[Binding Prediction<br/>0-1 probability]
+    end
+    
+    A -->|query| D1
+    B -->|key/value| D1
+    D1 --> D2
+    D2 --> D3
+    D3 --> D4
+    D4 --> D5
+    
+    B -->|query| E1
+    A -->|key/value| E1
+    E1 --> E2
+    E2 --> E3
+    E3 --> E4
+    E4 --> E5
+    
+    A --> F1
+    B --> F1
+    F1 --> F2
+    F2 --> F3
+    F3 --> F4
+    F4 --> F5
+    
+    C --> G1
+    G1 -->|PLE| G2
+    G1 -->|Periodic| G3
+    G2 --> G4
+    G3 --> G4
+    
+    D5 --> H
+    E5 --> H
+    F5 --> H
+    G4 --> H
+    
+    H --> I
+    I --> J
+    J --> K
+    K -->|repeat| I
+    K -->|continue| L
+    L --> M
+    
+    style A fill:#4a90e2,color:#fff
+    style B fill:#4a90e2,color:#fff
+    style C fill:#4a90e2,color:#fff
+    style D1 fill:#f5a623,color:#fff
+    style D2 fill:#ff6b6b,color:#fff
+    style D3 fill:#ffd93d,color:#000
+    style D4 fill:#ff6b6b,color:#fff
+    style D5 fill:#9013fe,color:#fff
+    style E1 fill:#f5a623,color:#fff
+    style E2 fill:#ff6b6b,color:#fff
+    style E3 fill:#ffd93d,color:#000
+    style E4 fill:#ff6b6b,color:#fff
+    style E5 fill:#9013fe,color:#fff
+    style F1 fill:#10b981,color:#fff
+    style F2 fill:#10b981,color:#fff
+    style F3 fill:#059669,color:#fff
+    style F4 fill:#059669,color:#fff
+    style F5 fill:#047857,color:#fff
+    style G1 fill:#06b6d4,color:#fff
+    style G2 fill:#06b6d4,color:#fff
+    style G3 fill:#06b6d4,color:#fff
+    style G4 fill:#06b6d4,color:#fff
+    style H fill:#d946ef,color:#fff
+    style I fill:#e74c3c,color:#fff
+    style J fill:#e74c3c,color:#fff
+    style L fill:#e91e63,color:#fff
+    style M fill:#27ae60,color:#fff

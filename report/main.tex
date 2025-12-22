@@ -1,0 +1,533 @@
+\documentclass[12pt,a4paper]{report}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{setspace}
+\usepackage{subcaption}
+\usepackage{csvsimple}
+\usepackage{booktabs}
+\usepackage{rotating}
+
+% Page geometry
+\geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\leftmark}
+\fancyfoot[C]{\thepage}
+
+% Line spacing
+\onehalfspacing
+
+% Title formatting
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+
+% Document information
+\title{Advancing cancer immunotherapy with protein language models and deep learning IT}
+\author{Benjamin Brandis & Michael Voemel}
+\date{\today}
+
+\begin{document}
+
+
+
+% Title page
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\LARGE\textbf{Advancing cancer immunotherapy with protein language models and deep learning IT}\par}
+    \vspace{1.5cm}
+    
+    {\Large Project Thesis\par}
+    \vspace{1cm}
+    
+    {\large ZHAW School of Engineering\par}
+    {\large Institute of Computer Science\par}
+    \vspace{1.5cm}
+    
+    {\large Submitted by:\par}
+    {\Large\textbf{Benjamin Brandis, Michael Voemel}\par}
+    \vspace{1cm}
+    
+    {\large Supervised by:\par}
+    {\large Prof. Dr. Jasmina Bogojeska\par}
+    \vspace{1.5cm}
+    
+    {\large \today\par}
+    
+    \vfill
+\end{titlepage}
+
+
+
+% Abstract
+\begin{abstract}
+Lorem ipsum dolor sit amet consectetur adipiscing elit tellus, fusce tristique malesuada nascetur ante lacus maecenas tempor fames, ullamcorper lacinia est placerat sed rutrum felis. Ac hac dapibus penatibus at posuere tincidunt pulvinar nec, platea condimentum a accumsan nostra et id commodo dictumst, himenaeos netus ad duis mus iaculis aenean.
+\end{abstract}
+
+
+
+% Table of Contents
+\tableofcontents
+\newpage
+
+
+
+% Chapter 1: Introduction
+\chapter{Introduction}
+
+\section{Initial Situation}
+
+[TBA]
+
+\section{Objective}
+
+[TBA]
+
+
+
+% Chapter 2: Related Work
+\chapter{Related Work}
+
+\section{Convolutional Neural Network (CNN) Approaches}Convolutional Neural Networks (CNNs), originally designed for computer vision, have been extensively adapted for TCR-epitope binding prediction to capture local dependencies and motif patterns within amino acid sequences. Existing approaches can be broadly categorized by their input representation strategies: those applying 1D convolutions directly to sequence embeddings, those converting interaction pairs into 2D images, and hybrid architectures where CNNs process intermediate feature maps.\\ \textbf{Interaction Map and 2D-CNN Approaches}\\ A foundational deviation from sequence-only processing was introduced by ImRex \cite{moris2020imrex}, which reframed binding prediction as an image classification problem. Rather than learning separate embeddings for the TCR and epitope, ImRex constructs "Interaction Maps", specifically 2D matrices of size $20 \times 11$ representing the pairwise physicochemical differences (hydrophobicity, hydrophilicity, mass, and isoelectric point) between amino acids of the CDR3 and the epitope. These maps are processed by a 2D-CNN architecture consisting of filters ($3\times3$) followed by max-pooling and dense layers. This approach posits that spatial patterns in the physicochemical difference matrix correlate with binding affinity, allowing the model to capture interaction interfaces explicitly.\\ \textbf{Sequence-Based 1D-CNN Approaches}\\ Conversely, NetTCR-2.0 \cite{montemurro2021nettcr} established that 1D-CNNs applied directly to sequence encodings could achieve competitive performance with computationally lighter architectures. NetTCR-2.0 utilizes a global max-pooling architecture where CDR3$\alpha$, CDR3$\beta$, and peptide sequences are encoded via the BLOSUM50 matrix. The model employs 1D convolutional layers with multiple kernel sizes ($1, 3, 5, 7, 9$) to capture motifs of varying lengths simultaneously. The resulting feature maps are concatenated and passed through dense layers. The authors demonstrated that this "shallow" CNN architecture was sufficient to model the problem complexity given the data constraints at the time, emphasizing the importance of paired-chain data over architectural depth.\\ \textbf{Hybrid and Ensemble Architectures}\\ Recent frameworks have integrated CNNs as components within larger ensemble or hybrid systems to complement attention mechanisms. TSpred \cite{kim2024tspred} employs an ensemble strategy combining a CNN-based module with an attention-based module. The CNN component utilizes 1D convolutions (kernel size 2) on one-hot encoded CDRs and epitope sequences to extract local sequence motifs, which are then combined with the global context captured by reciprocal attention mechanisms. Similarly, TEPCAM \cite{chen2024tepcam} integrates CNNs into a Cross-Attention and Multi-channel framework. Unlike ImRex, which builds static physicochemical maps, TEPCAM uses a CNN to process the dynamic attention maps generated by a cross-attention module. These attention maps, representing the learned inter-sequence dependencies between the TCR and epitope, are treated as multi-channel images. A multi-channel CNN is then applied to extract high-level "texture" features from these interaction patterns before the final classification, effectively using convolutions to refine the output of the attention mechanism.\\ \textbf{Structural and Generative CNN Applications}\\ CNNs have also been applied to more complex representations involving structural constraints or latent space generation. CATCR \cite{ji2024catcr} introduces a structure-aware framework where CNNs are used to process Residue Contact Matrices (RCMs) predicted by OpenFold. Parallel CNNs extract structural features from these distance matrices, which are then concatenated with sequence features derived from a transformer encoder. This allows the model to leverage spatial proximity information that is lost in pure sequence-based 1D convolutions. Finally, in the domain of unsupervised representation learning, TCR-VALID \cite{leary2023tcrvalid} utilizes CNNs within a Variational Autoencoder (VAE) framework. The encoder uses lightweight 1D convolutional layers (kernel widths 5, 3, 3) to map physicochemically encoded TCR sequences into a continuous, low-dimensional latent space, while the decoder uses 1D deconvolution layers to reconstruct the sequence. While not a direct binding predictor, this approach demonstrates the utility of CNNs in learning disentangled, continuous representations of the TCR landscape that facilitate clustering and generative tasks.
+
+\section{Attention Mechanisms and Transformers Approaches}
+
+To overcome the limitations of fixed kernel sizes in CNNs and the sequential processing constraints of RNNs, recent architectures have increasingly adopted attention mechanisms and Transformer-based models. These approaches allow for the modeling of long-range dependencies between amino acid residues and the dynamic weighting of interaction sites, regardless of their linear distance in the sequence.\\ \textbf{Bimodal and Context-Aware Attention}\\ One of the earlier applications of attention in this domain is TITAN \cite{weber2021titan}, which introduced a bimodal neural network architecture. Unlike self-attention applied to a single sequence, TITAN employs a "context attention" mechanism. Here, the encoded representation of the epitope acts as a context to compute attention weights for the TCR sequence, and vice versa. This cross-modal attention allows the model to focus on specific regions of the TCR (such as the CDR3 loops) that are most relevant to the physicochemical properties of the specific epitope presented, effectively simulating the induced fit of molecular docking.\\ \textbf{Multi-Head Self-Attention Frameworks}\\ Building on the success of the Transformer architecture in natural language processing, ATM-TCR \cite{cai2022atmtcr} implements a pure multi-head self-attention framework without relying on recurrent or convolutional priors for the initial encoding. The model utilizes separate encoders for the TCR and epitope, where each amino acid's representation is updated based on its interaction with all other residues in the sequence. By employing multiple attention heads, ATM-TCR captures various biological contexts, such as hydrophobicity or electrostatic potential—in parallel. The authors demonstrated that the resulting attention maps are interpretable and correlate with known binding motifs, providing insights into the "binding logic" of the model.\\ \textbf{Integration with Pre-trained Language Models}\\ More recent approaches leverage attention not just as an architectural component but as a bridge to integrate high-dimensional embeddings from pre-trained Protein Language Models (PLMs). EPIC-TRACE \cite{korpela2023epictrace} combines a convolution-based extraction of local motifs with a multi-head attention mechanism that operates on contextualized embeddings from ProtBERT. This hybrid design allows the model to utilize the rich, structure-aware feature space learned by the PLM while explicitly modeling the pairwise importance of features between the TCR and the epitope. This strategy has proven particularly effective for the challenging task of predicting interactions for unseen epitopes.\\ \textbf{Multimodal Attention Encoders}\\ Expanding the scope of input data, MATE-Pred \cite{goffinet2024matepred} proposes a multimodal attention-based predictor. It treats the TCR and epitope not merely as sequences but as multimodal entities comprising amino acid sequences, physicochemical properties, and structural contact maps (derived from ESM-2). MATE-Pred employs a Transformer-encoder block to fuse these diverse modalities. The self-attention mechanism within the encoder dynamically weighs the contribution of sequence data against structural constraints and physicochemical descriptors, enabling the model to learn a robust, holistic representation of the interaction interface that outperforms unimodal baselines.
+
+\section{Structure-Aware and Graph-Based Approaches}
+
+While sequence-based deep learning models such as NetTCR-2.0 \cite{montemurro2021nettcr} and ERGO-II \cite{springer2021ergoii} have established strong baselines for TCR-epitope binding prediction, they inherently treat amino acids as linear strings, potentially missing the crucial three-dimensional spatial constraints that govern molecular docking. Recent advances in the field have begun to address this limitation by incorporating structural priors and graph theory.
+
+Early efforts to integrate structure, such as TCRcost \cite{gao2024tcrcost}, utilized 3D Convolutional Neural Networks (3D-CNNs) and Long Short-Term Memory (LSTM) networks to process voxelized representations of the TCR-pMHC complex. Their results demonstrated that correcting predicted structures and utilizing atomic features significantly improved prediction accuracy compared to pure sequence baselines. Similarly, STAPLER \cite{kwee2023stapler} demonstrated the utility of transformer-based language models that implicitly learn structural motifs through massive pre-training, though it remains a sequence-first architecture.
+
+More recently, the GRAPE framework \cite{wang2025grape} represented a significant leap forward by combining Protein Language Models (PLMs) with graph regularization. GRAPE constructs a bipartite graph of TCR-epitope interactions and uses PLM embeddings (ESM-2) to regularize the graph attention mechanism. This approach mitigates the "over-smoothing" problem common in GNNs and addresses the severe class imbalance inherent in binding data. However, many of these approaches still rely on static or predicted structures that can be computationally expensive to generate at scale. The integration of high-throughput structural hallucination (e.g., via ESMFold) directly into the training loop, as proposed in this thesis's outlook, remains an active and promising frontier for next-generation immunoinformatics.
+
+\section{Transfer Learning and Pre-training Strategies}
+
+The application of deep learning to TCR-epitope binding prediction is often hindered by the scarcity of high-quality, labeled interaction data compared to the vast theoretical diversity of the immune repertoire. To address this, recent approaches have adopted transfer learning strategies, where models are first pre-trained on large-scale unlabeled datasets to learn the fundamental "grammar" of protein sequences or structural constraints before being fine-tuned on specific binding tasks.\\ \textbf{Transformer-based Language Models (BERT adaptations)}\\ Inspired by Natural Language Processing (NLP), several methods utilize the BERT (Bidirectional Encoder Representations from Transformers) architecture to model immune sequences. A key innovation in this space is the adaptation of the Masked Language Modeling (MLM) objective to biological sequences.\\ TCR-BERT \cite{wu2021tcrbert} employs a two-stage pre-training strategy to learn a robust representation of T-cell receptors. First, it undergoes a "Masked Amino Acid" (MAA) pre-training on approximately 88,000 unlabeled TCR sequences, forcing the model to infer hidden residues based on their context. Unlike generic protein models, TCR-BERT introduces a second, domain-specific pre-training stage focused on antigen classification, using labeled clusters to refine the model's understanding of binding semantics before the final fine-tuning.\\ Similarly, BERTrand-peptide \cite{myronov2023bertrand} leverages the BERT architecture but introduces a novel approach to data construction for pre-training. Recognizing the lack of paired data, the authors construct a "hypothetical peptide:TCR repertoire" by randomly pairing experimentally verified MHC-I presented peptides with TCR sequences from healthy donors. This synthetic dataset allows the model to perform MLM on paired inputs, effectively learning cross-sequence dependencies between the TCR and the peptide even before exposure to ground-truth binding labels.\\
+\textbf{Autoencoder-based Latent Representations}\\ Alternative architectures focus on reconstruction tasks to generate dense numerical embeddings. TEINet \cite{jiang2022teinet} utilizes a transfer learning framework based on sequence autoencoders. Instead of a monolithic model, it employs two separately pre-trained encoders (derived from the TCRpeg architecture): one trained on over a million TCR sequences and another on a large library of epitope sequences. These encoders learn to map variable-length sequences into fixed-dimensional latent vectors by minimizing reconstruction error. These pre-trained features are then fed into a feed-forward network, allowing the model to generalize better to unseen epitopes by leveraging the intrinsic features learned during the unsupervised reconstruction phase.\\ \textbf{Structure-Aware Protein Language Models}\\ Recent advances have also bridged the gap between sequence modeling and 3D structure prediction. tFold-TCR \cite{wu2025tfoldtcr} illustrates how general Protein Language Models (PLMs) can be adapted for immune complex modeling. It builds upon the ESM-2 architecture, extending it to "ESM-PPI-TCR" by further pre-training on a diverse set of protein-protein interactions (PPI), antibodies, and TCR multimers. This specialized pre-training enables the model to extract intra- and inter-chain residue contact information directly from sequence data, bypassing the computationally expensive Multiple Sequence Alignment (MSA) step typically required for structural modeling. This approach demonstrates that pre-training can capture not just sequence patterns, but also the evolutionary and structural constraints governing molecular docking.
+
+\section{Input Representation and Data Handling}
+
+The performance of deep learning models in immunoinformatics is heavily contingent upon two design choices: the scope of biological information included in the input representation and the strategy employed to generate artificial negative data (non-binders) for training.\\ \textbf{Paired vs. Single Chain Inputs}\\ Early computational approaches predominantly focused on the CDR3$\beta$ chain due to the higher availability of beta-chain sequencing data. However, recent benchmarks have demonstrated that this simplification limits prediction accuracy. NetTCR-2.0 \cite{montemurro2021nettcr} provided a quantitative analysis showing that models trained on paired CDR3$\alpha$ and CDR3$\beta$ sequences significantly outperform single-chain baselines, particularly when predicting specificity for pMHC complexes with limited training data. This finding has influenced subsequent architectures like TSpred \cite{kim2024tspred}, which mandates paired input to capture the full heterodimeric context of the TCR. Some models, such as EPIC-TRACE \cite{korpela2023epictrace}, extend this scope further by including not just the CDR3 regions but the full variable (V) gene sequences or additional CDR loops (CDR1/2), thereby capturing germline-encoded features that stabilize the pMHC interaction.\\ \textbf{Sequential Encodings and RNNs}\\ To handle the variable lengths of amino acid sequences without resorting to manual feature engineering or padding artifacts, Recurrent Neural Networks (RNNs) have been widely adopted. ERGO \cite{springer2020ergo} represented a shift from fixed-length physicochemical descriptors to learned representations, utilizing Long Short-Term Memory (LSTM) networks to encode TCR and peptide sequences into dense vectors. By processing sequences step-by-step, ERGO captures sequential dependencies and motifs that static matrices might miss.\\ Building on this, PiTE \cite{zhang2022pite} employs a two-stage pipeline that integrates pre-training with sequential modeling. Instead of simple one-hot encoding, PiTE utilizes a pre-trained Bidirectional LSTM (BiLSTM), conceptually similar to ELMo—to project amino acids into continuous vector spaces based on their context within large unlabeled TCR corpora. While transformer-based methods are gaining traction for global context, PiTE demonstrates that BiLSTMs remain a powerful tool for generating locally contextualized embeddings that outperform static baselines like BLOSUM matrices.\\ \textbf{Negative Sampling Strategies}\\ Since experimental assays typically report only positive binding events, the generation of "negative" samples (decoy pairs) is a critical component of the training pipeline. The choice of sampling strategy directly impacts the model's ability to generalize and avoid bias. TEINet \cite{jiang2022teinet} provides a comprehensive analysis of these strategies, arguing against simple random shuffling which can distort the natural frequency distribution of epitopes. Instead, they propose "Unified Epitope Sampling," which preserves the epitope frequency distribution in the negative set, providing a more robust training signal that prevents the model from simply learning to classify based on epitope popularity. Other frameworks adopt biological controls; for instance, MATE-Pred \cite{goffinet2024matepred} generates negatives by sampling TCR sequences from healthy donor repertoires (presumed non-reactive to the specific target), thereby ensuring that the negative class represents realistic, naturally occurring TCR sequences rather than synthetic permutations.
+
+\section{TBA}
+
+[TBA]
+
+
+
+% Chapter 3: Theoretical Foundations
+\chapter{Theoretical Foundations}
+
+[TBA]
+
+
+
+% Chapter 4: Methods / Approach
+\chapter{Methods and Approach}
+
+To systematically improve the baseline TEP-NET model, a series of architectural enhancements were designed and evaluated. These enhancements were categorized into single-component additions, two-component combinations, and multi-component architectures. This approach allowed for an ablation-style analysis to isolate the impact of specific mechanisms—specifically Symmetric Cross-Attention, Transformer Blocks, Interaction Maps (CNNs), and Deep Residual Classifier Heads.
+
+\section{Dataset}
+
+[TBA]
+
+\section{Preprocessing}
+
+[TBA]
+
+\section{Baseline Architecture (v0)}
+
+The baseline model ($v0$) replicates the architecture proposed in the original TEP-NET master thesis. It utilizes a dual-input stream where PCA-reduced ProtBERT embeddings ($d=64$) for the TCR and Epitope are processed via a Multi-Head Attention mechanism. A critical characteristic of the baseline is its asymmetry: the TCR embedding serves as the Query, while the Epitope serves as the Key and Value. The output is pooled and concatenated with physicochemical properties before passing through a dense classification layer.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/architectures/arch_diagram_v0.png}
+    \caption{Architecture of Baseline Model.}
+\end{figure}
+
+\section{Architectural Improvements}
+
+\subsection{Symmetric Cross-Attention (v1)}
+
+Biological interaction between a TCR and an epitope is a mutual physicochemical process, not a unidirectional query. The baseline model's asymmetry potentially biases the feature extraction towards the TCR's perspective of the epitope. To address this, Model $v1$ introduces Symmetric Cross-Attention.
+A parallel attention branch was added where the Epitope embedding acts as the Query and the TCR as the Key and Value. The outputs of both the original (TCR$\to$Epitope) and new (Epitope$\to$TCR) branches are globally pooled and concatenated, providing a holistic representation of the binding interface.
+
+\subsection{Transformer Blocks (v2)}
+
+The baseline utilizes a raw Multi-Head Attention layer. Modern sequence modeling, however, relies on full Transformer Blocks to stabilize gradients and enable deeper representation learning.In Model $v2$ (and subsequent variants $v6, v7, v8$), the raw attention layers were replaced with custom Transformer blocks. Each block encapsulates:
+
+\begin{enumerate}
+  \item Multi-Head Attention.
+  \item Dropout and Residual Connections (Add).
+  \item Layer Normalization.
+  \item A Feed-Forward Network (FFN). \textit{Note}: In this implementation, the hidden dimension of the FFN within the Transformer block was coupled to the same hyperparameter ($\texttt{ff\_dim}$) used for the final classifier's dense layers.
+\end{enumerate}
+
+\subsection{Interaction Map with 2D CNN (v3)}
+
+While attention mechanisms capture contextual relationships, they do not explicitly model the pairwise residue-to-residue compatibility matrix often used in structural biology. Model $v3$ calculates an Interaction Map via the outer product (dot product) of the TCR and Epitope sequence embeddings, resulting in a $26 \times 24$ spatial grid.
+A 2D Convolutional Neural Network (CNN) is applied to this grid to detect local binding motifs (e.g., diagonal patterns representing aligned hydrophobic patches), effectively treating binding prediction as an image classification task.
+
+\subsection{Deep ResNet Classifier Head (v4)}
+
+The baseline employs a shallow classification head. To capture highly non-linear interactions between the extracted embeddings and the physicochemical features, Model $v4$ replaces the simple dense layers with a Deep Residual Network (ResNet). This consists of stacked dense blocks with residual connections and Layer Normalization, preventing the vanishing gradient problem and allowing the model to act as a deeper function approximator.
+
+\section{Combinatorial Architectures}
+
+To investigate whether these improvements are additive, several combinations were implemented:
+
+\begin{itemize}
+  \item $v5$: Symmetric Attention + CNN + ResNet Head.
+  \item $v6$: Symmetric Attention + Transformer Block + CNN.
+  \item $v7$: Symmetric Attention + Transformer Block + ResNet Head.
+  \item $v8$ (Full Architecture): Symmetric Attention + Transformer Block + CNN + ResNet Head.
+\end{itemize}
+
+\section{Hyperparameter Tuning and Training Protocol}
+
+Each model version ($v0 - v8$) underwent rigorous hyperparameter optimization using the Optuna framework with 35 trials per model. To ensure the optimizer choice did not bias the results, the tuning process was performed twice for each model: once using Stochastic Gradient Descent (SGD) and once using ADAM.
+The hyperparameters tuned included the learning rate, dropout rate, L2 regularization, $\texttt{ff\_dim}$ (feature dimension size), number of layers, and number of attention heads.
+Following tuning, the models were trained fully using the best hyperparameter configuration found for each optimizer.
+
+
+
+% Chapter 5: Results
+\chapter{Results}
+
+The models were evaluated using the TCR-Peptide Pairing (TPP) framework, which assesses generalization across four distinct categories: TPP1 (Seen TCR/Seen Epitope), TPP2 (Seen TCR/Unseen Epitope), TPP3 (Unseen TCR/Unseen Epitope), and TPP4 (Seen TCR/Unseen Epitope).
+
+\section{Optimizer Performance: SGD vs. ADAM}
+
+A consistent trend was observed across all architectures regarding the optimization algorithm. Models tuned and trained with ADAM generally performed poorly compared to their SGD counterparts. While ADAM-trained models showed slight improvements in the TPP2 category, they demonstrated significant degradation in TPP1, TPP3, and TPP4. Conversely, SGD provided more stable convergence and superior generalization capabilities across the board. Consequently, the following detailed model comparisons focus on the results obtained using the SGD optimizer.
+
+% TODO: either do figures side by side or one after another
+% \begin{figure}[htbp]
+%     \centering
+%     \begin{subfigure}{0.45\textwidth}
+%         \centering
+%         \includegraphics[width=\textwidth]{figures/plot_tpp_performance_sgd.png}
+%         \caption{using SGD optimizer}
+%         \label{fig:sub1}
+%     \end{subfigure}
+%     \hfill
+%     \begin{subfigure}{0.45\textwidth}
+%         \centering
+%         \includegraphics[width=\textwidth]{figures/plot_tpp_performance_adam.png}
+%         \caption{using ADAM optimizer}
+%         \label{fig:sub2}
+%     \end{subfigure}
+%     \caption{TPP performance optimizer comparison}
+%     \label{fig:main}
+% \end{figure}
+
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=1\textwidth]{figures/plot_tpp_performance_sgd.png}
+%     \caption{TPP performance using the SGD optimizer.}
+% \end{figure}
+
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=1\textwidth]{figures/plot_tpp_performance_adam.png}
+%     \caption{TPP performance using the ADAM optimizer.}
+% \end{figure}
+
+\begin{figure}[h]
+    \centering
+    \begin{subfigure}{1\textwidth}
+        \centering
+        \includegraphics[width=1\textwidth]{figures/plot_tpp_performance_sgd.png}
+        \caption{TPP performance using the SGD optimizer.}
+        \label{fig:sgd}
+    \end{subfigure}
+
+    \vspace{2em}
+    
+    \begin{subfigure}{1\textwidth}
+        \centering
+        \includegraphics[width=1\textwidth]{figures/plot_tpp_performance_adam.png}
+        \caption{TPP performance using the ADAM optimizer.}
+        \label{fig:adam}
+    \end{subfigure}
+
+    \caption{TPP performance optimizer comparison}
+    \label{fig:optimizers}
+\end{figure}
+
+\section{Model Performance Evaluation}
+
+\subsection{The Effect of Symmetric Attention (v1)}
+
+The introduction of Symmetric Cross-Attention ($v1$) yielded the most significant and consistent improvements. The $v1$ model outperformed the Baseline ($v0$) in every TPP category. This suggests that explicitly modeling the bidirectional nature of the TCR-epitope interaction allows the network to extract more robust binding features without increasing the risk of overfitting.
+
+\subsection{The Effect of Deep Residual Heads (v4)}
+
+The Deep ResNet Classifier architecture ($v4$) demonstrated a distinct trade-off. It underperformed the Baseline in TPP1 (memorization of seen pairs) but achieved superior performance in TPP2, TPP3, and TPP4. This indicates that a deeper classifier head improves the model's ability to generalize to unseen biological sequences, likely by learning more abstract representations of the physicochemical features, even if it sacrifices some precision on known data points.
+
+\subsection{Performance of Complex Architectures (v2, v3, v5–v8)}
+
+Contrary to the hypothesis that combining advanced mechanisms would yield additive gains, the complex multi-component models ($v2, v3, v5, v6, v7, v8$) performed poorly.
+
+\begin{itemize}
+  \item Transformer Blocks (v2, v6, v7, v8): Models incorporating the full Transformer block structure failed to beat the baseline.
+  \item Interaction Maps (v3, v5, v6, v8): The addition of the 2D CNN branch did not provide a performance boost and, in combination with other features, led to performance degradation.
+\end{itemize}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/plot_metrics_sgd.png}
+    \caption{Metrics using the SGD optimizer.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/plot_roc_curves_sgd.png}
+    \caption{ROC curve comparison using the SGD optimizer.}
+\end{figure}
+
+In summary, the simplest structural change (Symmetry, $v1$) provided the best overall result, while the Deep ResNet head ($v4$) offered a viable alternative for generalization-focused tasks.
+
+
+
+% Chapter 6: Discussion and Outlook
+\chapter{Discussion and Outlook}
+
+\section{Success of Symmetric Architectures}
+
+The success of Model $v1$ validates the biological intuition that binding is a two-way street. In the baseline TEP-NET, the epitope was treated merely as a context for the TCR. By making the attention mechanism symmetric, the model could identify features in the TCR that are relevant to the epitope and vice-versa. This architectural change added minimal parameter overhead but maximized information flow, resulting in the universal improvement observed across all TPP categories.
+
+\section{Generalization vs. Memorization (v4)}
+
+Model $v4$ highlighted an interesting dichotomy between memorization and generalization. The deeper, residual classifier head likely prevented the model from simply memorizing the training pairs (hence the lower TPP1 score) but forced it to learn non-linear decision boundaries based on physicochemical properties. This resulted in better performance on the "hard" tasks (TPP3/TPP4). This suggests that for real-world applications where novel viruses appear (Unseen Epitopes), a deeper classifier head might be preferable despite lower training accuracy.
+
+\section{Failure of Complex Models and the "Shared Dimension" Bottleneck}
+
+The poor performance of the more complex models ($v2, v3$, and combinations) was unexpected. Several factors likely contributed to this:
+
+\begin{enumerate}
+  \item Over-parameterization: The dataset size (approx. 1M samples, heavily imbalanced) may not be sufficient to train the significantly larger number of parameters introduced by full Transformer blocks and CNNs without overfitting.
+  \item Optimizer Behavior: The failure of ADAM and the success of SGD aligns with recent literature suggesting that ADAM tends to converge to sharp minima (which generalize poorly), whereas SGD often finds flatter minima (which generalize better). The complex landscapes of models $v5-v8$ likely exacerbated ADAM's generalization issues.
+  \item The Hyperparameter Coupling Issue: A critical retrospective analysis of the code reveals a potential design flaw in the Transformer Block implementation. The hyperparameter $\texttt{ff\_dim}$ was shared between the Transformer's internal Feed-Forward Network and the final classification dense layers.
+  \begin{itemize}
+      \item Standard Practice: In Transformers, the internal FFN dimension is typically $4\times$ the embedding dimension (i.e., $4 \times 64 = 256$) to allow for feature expansion and disentanglement.
+      \item Implementation: In our tuning, $\texttt{ff\_dim}$ was often tuned to lower values (e.g., 50-150) to suit the final classifier head.
+      \item Consequence: This likely created a "bottleneck" inside the Transformer blocks, preventing them from functioning effectively. The Transformer blocks were constrained to be too narrow, rendering them less effective than the raw attention mechanism of $v0$ and $v1$.
+  \end{itemize}
+\end{enumerate}
+
+\section{Outlook and Future Work}
+
+Based on these findings, future work should prioritize the following:
+
+\begin{enumerate}
+    \item Decoupling Hyperparameters: The tuning process should be refined to separate the $\texttt{ff\_dim}$ of the Transformer blocks from the $\texttt{ff\_dim}$ of the classifier head. This would allow the Transformer to expand features as intended while keeping the classifier compact.
+    \item Ensembling: Given that $v1$ excels overall and $v4$ excels in generalization, an ensemble of these two models could potentially offer state-of-the-art performance across all metrics.
+    \item Pre-training: For the complex architectures ($v8$) to work, unsupervised pre-training on larger, unlabeled TCR databases might be necessary to initialize the weights effectively before fine-tuning on the binding dataset.
+\end{enumerate}
+
+In conclusion, this study demonstrates that in the domain of TCR-epitope prediction, biologically grounded architectural simplicity (Symmetry) currently outweighs unconstrained model complexity.
+
+\section{Geometric Deep Learning for Interaction Prediction}
+
+[TBA]
+
+
+
+% Bibliography
+\bibliographystyle{plain}
+\bibliography{references}
+
+
+
+% Optional: Glossary
+% \chapter*{Glossary}
+% \addcontentsline{toc}{chapter}{Glossary}
+% [Only if many technical terms are used]
+
+
+
+% List of Figures
+\listoffigures
+
+
+
+% List of Tables
+\listoftables
+
+
+
+% Optional: List of Symbols
+\chapter*{List of Symbols}
+\addcontentsline{toc}{chapter}{List of Symbols}
+[Only if very many and unusual symbols are used]
+
+
+
+% Optional: List of Abbreviations
+\chapter*{List of Abbreviations}
+\addcontentsline{toc}{chapter}{List of Abbreviations}
+[Only if very many and unusual abbreviations are used]
+
+
+
+% Appendix
+\appendix
+
+% \chapter{Project Management}
+
+% \section{Official Task Description}
+% [Include the official task description, project assignment]
+
+% \section{Timeline}
+% [If applicable: Include project timeline]
+
+% \section{Meeting Protocols or Journals}
+% [If applicable]
+
+
+
+\chapter{Additional Materials}
+
+\section{Model Performance Metrics Plots}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/versions/plot_metrics_v1.png}
+    \caption{Model Version 1 using Symmetric Cross-Attention Metrics Plot.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/versions/plot_roc_curves_v1.png}
+    \caption{Model Version 1 using Symmetric Cross-Attention ROC Curves Plot.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/versions/plot_tpp_performance_v1.png}
+    \caption{Model Version 1 using Symmetric Cross-Attention TPP Performance Plot.}
+\end{figure}
+
+% TODO: add remaining figures
+
+\section{Model Performance Metrics Tables}
+
+\begin{sidewaystable}
+\centering
+\csvreader[
+  tabular=l*{8}{r},
+  table head=\toprule \bfseries Model & \bfseries Global ROC & \bfseries Global F1 & \bfseries Global Prec & \bfseries Global Rec & \bfseries TPP1 F1 & \bfseries TPP2 F1 & \bfseries TPP3 F1 & \bfseries TPP4 F1 \\ \midrule,
+  late after line=\\,
+  table foot=\bottomrule
+]{tables/metrics_table_sgd.csv}{Model=\model, Global ROC=\groc, Global F1=\gf, Global Precision=\gprec, Global Recall=\grec, TPP1 F1=\tppone, TPP2 F1=\tpptwo, TPP3 F1=\tppthree, TPP4 F1=\tppfour}{\model & \groc & \gf & \gprec & \grec & \tppone & \tpptwo & \tppthree & \tppfour}
+\caption{Performance Metrics with SGD Optimizer}
+\end{sidewaystable}
+
+\begin{sidewaystable}
+\centering
+\csvreader[
+  tabular=l*{8}{r},
+  table head=\toprule \bfseries Model & \bfseries Global ROC & \bfseries Global F1 & \bfseries Global Prec & \bfseries Global Rec & \bfseries TPP1 F1 & \bfseries TPP2 F1 & \bfseries TPP3 F1 & \bfseries TPP4 F1 \\ \midrule,
+  late after line=\\,
+  table foot=\bottomrule
+]{tables/metrics_table_adam.csv}{Model=\model, Global ROC=\groc, Global F1=\gf, Global Precision=\gprec, Global Recall=\grec, TPP1 F1=\tppone, TPP2 F1=\tpptwo, TPP3 F1=\tppthree, TPP4 F1=\tppfour}{\model & \groc & \gf & \gprec & \grec & \tppone & \tpptwo & \tppthree & \tppfour}
+\caption{Performance Metrics with Adam Optimizer}
+\end{sidewaystable}
+
+
+\section{Model Architecture Diagrams}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/architectures/arch_diagram_v1.png}
+    \caption{Architecture of Model Version 1 using Symmetric Cross-Attention.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/architectures/arch_diagram_v2.png}
+    \caption{Architecture of Model Version 2 using Symmetric Cross-Attention and Transformer Blocks.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/architectures/arch_diagram_v3.png}
+    \caption{Architecture of Model Version 3 using Symmetric Cross-Attention and Interaction Map (2D CNN).}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\textwidth]{figures/architectures/arch_diagram_v4.png}
+    \caption{Architecture of Model Version 4 using Symmetric Cross-Attention and Deep ResNet Classifier Head.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/architectures/arch_diagram_v5.png}
+    \caption{Architecture of Model Version 5 using Symmetric Cross-Attention, Interaction Map (2D CNN) and Deep ResNet Classifier Head.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/architectures/arch_diagram_v6.png}
+    \caption{Architecture of Model Version 6 using Symmetric Cross-Attention, Transformer Blocks and Interaction Map (2D CNN).}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\textwidth]{figures/architectures/arch_diagram_v7.png}
+    \caption{Architecture of Model Version 7 using Symmetric Cross-Attention, Transformer Blocks and Deep ResNet Classifier Head.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/architectures/arch_diagram_v8.png}
+    \caption{Architecture of Model Version 8 using Symmetric Cross-Attention, Transformer Blocks, Interaction Map (2D CNN) and Deep ResNet Classifier Head.}
+\end{figure}
+
+
+\section{Custom Machine Learning Jobs Software}
+
+[TBA]
+
+
+% \section{Circuit Diagrams and Flow Charts}
+% [If applicable]
+
+% \section{Specifications and Data Sheets}
+% [If applicable: Specifications and data sheets of measuring devices and/or components used]
+
+% \section{Calculations, Measurements, Simulation Results}
+% [If applicable]
+
+% \section{Material Data}
+% [If applicable]
+
+% \section{Error Calculations with Measurement Uncertainties}
+% [If applicable]
+
+% \section{Graphical Representations, Photos}
+% [If applicable]
+
+% \section{Digital Media}
+% [CD with complete report as PDF file including data, film and photo material]
+
+% [If applicable: Data carrier with additional data (e.g., software components) including directory of files stored on this data carrier]
+
+% \section{Software Code}
+% [If applicable: Include software source code]
+
+\end{document}

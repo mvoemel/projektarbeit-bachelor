@@ -14,7 +14,7 @@ import tensorflow as tf
 # Force JIT off at the TF level
 tf.config.optimizer.set_jit(False)
 
-# Set Memory growth instead of TF claiming all memory
+# Set dynamic Memory growth instead of TF claiming all memory
 gpus = tf.config.list_physical_devices('GPU')
 print(f"GPU available: {gpus}")
 print(f"Built with CUDA: {tf.test.is_built_with_cuda()}")
@@ -290,11 +290,6 @@ def run_training(args, model_module):
         callbacks=[early_stopping]
     )
     
-    # TODO: delete and uncomment at the end
-    save_name = f"{MODEL_NAME_PREFIX}_v{args.version}_{EMBEDDING_DIM}_{EMBEDDING_TYPE}{args.tag}.keras"
-    model.save(os.path.join(OUTPUT_PREFIX, save_name))
-    print(f"\nModel saved to {save_name}")
-    
     # Evaluation
     print("\nLoading Test Set...")
     test_file = os.path.join(DATA_PATH, TEST_FILE)
@@ -319,9 +314,9 @@ def run_training(args, model_module):
         tags="tada"
     )
     
-    # save_name = f"{MODEL_NAME_PREFIX}_v{args.version}_{EMBEDDING_DIM}_{EMBEDDING_TYPE}{args.tag}.keras"
-    # model.save(os.path.join(OUTPUT_PREFIX, save_name))
-    # print(f"\nModel saved to {save_name}")
+    save_name = f"{MODEL_NAME_PREFIX}_v{args.version}_{EMBEDDING_DIM}_{EMBEDDING_TYPE}{args.tag}.keras"
+    model.save(os.path.join(OUTPUT_PREFIX, save_name))
+    print(f"\nModel saved to {save_name}")
     
     # Cleanup
     tf.keras.backend.clear_session()
